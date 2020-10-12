@@ -13,9 +13,12 @@ std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
 	std::vector<float> result;
 	float step = (to - from)/(numVals-1); 
 	float temp = from; 
-	for (int i = 0; i < numVals; i++) {
-		result.push_back(temp);
+
+	result.push_back(temp);
+
+	for (int i = 0; i < numVals-1; i++) {
 		temp = temp + step;
+		result.push_back(temp);
 	}
 	return result;
 }
@@ -30,12 +33,15 @@ std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 t
 	float yTemp = from.y;
 	float zTemp = from.z;
 
-	for (int i = 0; i < numVals; i++) {
-		glm::vec3 temp(xTemp, yTemp, zTemp); 
-		result.push_back(temp);
+	glm::vec3 first(xTemp, yTemp, zTemp);
+	result.push_back(first);
+
+	for (int i = 0; i < numVals-1; i++) {
 		xTemp = xTemp + xStep;
 		yTemp = yTemp + yStep;
 		zTemp = zTemp + zStep;
+		glm::vec3 temp(xTemp, yTemp, zTemp); 
+		result.push_back(temp);
 	}
 
 	return result;
@@ -48,6 +54,32 @@ void draw(DrawingWindow &window, std::vector<float> weight) {
 			float red = weight.at(x);
 			float green = weight.at(x);
 			float blue = weight.at(x);
+			uint32_t colour = (255 << 24) + (int(red) << 16) + (int(green) << 8) + int(blue);
+			window.setPixelColour(x, y, colour);
+		}
+	}
+}
+
+void drawColour(DrawingWindow &window) {
+	window.clearPixels();
+	glm::vec3 topLeft(255, 0, 0);        // red 
+	glm::vec3 topRight(0, 0, 255);       // blue 
+	glm::vec3 bottomRight(0, 255, 0);    // green 
+	glm::vec3 bottomLeft(255, 255, 0);   // yellow
+	
+	std::vector<glm::vec3> left;
+	std::vector<glm::vec3> right;
+
+	left = interpolateThreeElementValues(topLeft, bottomLeft, 240);
+	right = interpolateThreeElementValues(topRight, bottomRight, 240);
+
+	for (size_t y = 0; y < window.height; y++) {
+		std::vector<glm::vec3> row;
+		row = interpolateThreeElementValues(left[y], right[y], 320);
+		for (size_t x = 0; x < window.width; x++) {
+			float red = row[x].x;
+			float blue = row[x].z;
+			float green = row[x].y; 
 			uint32_t colour = (255 << 24) + (int(red) << 16) + (int(green) << 8) + int(blue);
 			window.setPixelColour(x, y, colour);
 		}
@@ -68,22 +100,32 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 }
 
 int main(int argc, char *argv[]) {
-	std::vector<glm::vec3> result;
-	glm::vec3 from(1, 4, 9.2);
-	glm::vec3 to(4, 1, 9.8);
+	std::vector<float> result;
+	result = interpolateSingleFloats(255, 0, 320);
 
-	result = interpolateThreeElementValues(from, to, 4);
-	for(size_t i=0; i<result.size(); i++) std::cout << glm::to_string(result[i]) << " ";
-	std::cout << std::endl;
+	// glm::vec3 topLeft(255, 0, 0);        // red 
+	// glm::vec3 topRight(0, 0, 255);       // blue 
+	// glm::vec3 bottomRight(0, 255, 0);    // green 
+	// glm::vec3 bottomLeft(255, 255, 0);   // yellow
+	
+	// std::vector<glm::vec3> left;
+	// std::vector<glm::vec3> right;
 
-	// DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
-	// SDL_Event event;
-	// while (true) {
-	// 	// We MUST poll for events - otherwise the window will freeze !
-	// 	if (window.pollForInputEvents(event)) handleEvent(event, window);
-	// 	update(window);
-	// 	draw(window, result);
-	// 	// Need to render the frame at the end, or nothing actually gets shown on the screen !
-	// 	window.renderFrame();
-	// }
+	// left = interpolateThreeElementValues(topLeft, bottomLeft, 240);
+	// right = interpolateThreeElementValues(topRight, bottomRight, 240);
+
+	// for(size_t i=0; i<left.size(); i++) std::cout << glm::to_string(left[i]) << " ";
+	// std::cout << std::endl;
+
+	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
+	SDL_Event event;
+	while (true) {
+		// We MUST poll for events - otherwise the window will freeze !
+		if (window.pollForInputEvents(event)) handleEvent(event, window);
+		update(window);
+		// draw(window, result);
+		drawColour(window);
+		// Need to render the frame at the end, or nothing actually gets shown on the screen !
+		window.renderFrame();
+	}
 }
