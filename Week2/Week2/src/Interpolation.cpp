@@ -3,11 +3,11 @@
 #include <Utils.h>
 #include <fstream>
 #include <vector>
+#include <glm/vec3.hpp> // glm::vec3
+#include <glm/gtx/string_cast.hpp>
 
 #define WIDTH 320
 #define HEIGHT 240
-
-using namespace std;
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
 	std::vector<float> result;
@@ -17,6 +17,27 @@ std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
 		result.push_back(temp);
 		temp = temp + step;
 	}
+	return result;
+}
+
+std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, int numVals) {
+	std::vector<glm::vec3> result;
+	float xStep = (to.x - from.x)/(numVals - 1);
+	float yStep = (to.y - from.y)/(numVals - 1);
+	float zStep = (to.z - from.z)/(numVals - 1);
+
+	float xTemp = from.x;
+	float yTemp = from.y;
+	float zTemp = from.z;
+
+	for (int i = 0; i < numVals; i++) {
+		glm::vec3 temp(xTemp, yTemp, zTemp); 
+		result.push_back(temp);
+		xTemp = xTemp + xStep;
+		yTemp = yTemp + yStep;
+		zTemp = zTemp + zStep;
+	}
+
 	return result;
 }
 
@@ -47,19 +68,22 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 }
 
 int main(int argc, char *argv[]) {
-	std::vector<float> result;
-	result = interpolateSingleFloats(255, 0, 320);
-	for(size_t i=0; i<result.size(); i++) std::cout << result[i] << " ";
+	std::vector<glm::vec3> result;
+	glm::vec3 from(1, 4, 9.2);
+	glm::vec3 to(4, 1, 9.8);
+
+	result = interpolateThreeElementValues(from, to, 4);
+	for(size_t i=0; i<result.size(); i++) std::cout << glm::to_string(result[i]) << " ";
 	std::cout << std::endl;
 
-	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
-	SDL_Event event;
-	while (true) {
-		// We MUST poll for events - otherwise the window will freeze !
-		if (window.pollForInputEvents(event)) handleEvent(event, window);
-		update(window);
-		draw(window, result);
-		// Need to render the frame at the end, or nothing actually gets shown on the screen !
-		window.renderFrame();
-	}
+	// DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
+	// SDL_Event event;
+	// while (true) {
+	// 	// We MUST poll for events - otherwise the window will freeze !
+	// 	if (window.pollForInputEvents(event)) handleEvent(event, window);
+	// 	update(window);
+	// 	draw(window, result);
+	// 	// Need to render the frame at the end, or nothing actually gets shown on the screen !
+	// 	window.renderFrame();
+	// }
 }
