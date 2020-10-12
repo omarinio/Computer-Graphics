@@ -100,23 +100,6 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 }
 
 int main(int argc, char *argv[]) {
-	std::vector<float> result;
-	result = interpolateSingleFloats(255, 0, 320);
-
-	// glm::vec3 topLeft(255, 0, 0);        // red 
-	// glm::vec3 topRight(0, 0, 255);       // blue 
-	// glm::vec3 bottomRight(0, 255, 0);    // green 
-	// glm::vec3 bottomLeft(255, 255, 0);   // yellow
-	
-	// std::vector<glm::vec3> left;
-	// std::vector<glm::vec3> right;
-
-	// left = interpolateThreeElementValues(topLeft, bottomLeft, 240);
-	// right = interpolateThreeElementValues(topRight, bottomRight, 240);
-
-	// for(size_t i=0; i<left.size(); i++) std::cout << glm::to_string(left[i]) << " ";
-	// std::cout << std::endl;
-
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
 	while (true) {
