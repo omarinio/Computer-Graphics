@@ -52,7 +52,7 @@ void fillHalf(DrawingWindow &window, CanvasTriangle triangle, Colour colour) {
 	for (float i = 0.0; i < steps1; i++) {
 		for (float j = 0.0; j < steps2; j++) {
 			float x1 = top.x + (x1Step * i);
-			float y1 = top.y + (y1Step * 1);
+			float y1 = top.y + (y1Step * i);
 
 			float x2 = top.x + (x2Step * j);
 			float y2 = top.y + (y2Step * j);
@@ -93,7 +93,7 @@ void drawFilledTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour c
 	split.x = round(top.x + ((mid.y - top.y)/(bot.y-top.y)) * (bot.x-top.x));
 
 	CanvasTriangle triangle1(top, mid, split);
-	CanvasTriangle triangle2(split, mid, bot);
+	CanvasTriangle triangle2(mid, split, bot);
 
 	fillHalf(window, triangle1, colour);
 	fillHalf(window, triangle2, colour);
