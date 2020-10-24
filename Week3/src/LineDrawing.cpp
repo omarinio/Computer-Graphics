@@ -174,24 +174,20 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 	if (bot.y < mid.y) {
 		std::swap(bot.y, mid.y);
 		std::swap(bot.x, mid.x);
+		std::swap(bot.texturePoint, mid.texturePoint);
 	}
 
 	if (mid.y < top.y) {
 		std::swap(mid.y, top.y);
 		std::swap(mid.x, top.x);
+		std::swap(mid.texturePoint, top.texturePoint);
 	}
 
 	if (bot.y < mid.y) {
 		std::swap(bot.y, mid.y);
 		std::swap(bot.x, mid.x);
+		std::swap(bot.texturePoint, mid.texturePoint);
 	}
-
-	float xDiff = bot.x - top.x;
-	float yDiff = bot.y - top.y;
-
-	float stepsDiff = std::max(abs(xDiff), abs(yDiff));
-
-	std::vector<CanvasPoint> middle = interpolatePoints(top, bot, stepsDiff);
 	CanvasPoint split;
 	split.y = mid.y;
 
@@ -202,6 +198,13 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 	split.texturePoint.x = top.texturePoint.x + scale * (bot.texturePoint.x - top.texturePoint.x);
 	split.texturePoint.y = top.texturePoint.y + scale * (bot.texturePoint.y - top.texturePoint.y);
 
+	std::cout << top << std::endl;
+	std::cout << top.texturePoint << std::endl;
+	std::cout << mid << std::endl;
+	std::cout << mid.texturePoint << std::endl;
+	std::cout << bot << std::endl;
+	std::cout << bot.texturePoint << std::endl;
+
 	// TOP TRIANGLE ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 	std::vector<CanvasPoint> left = interpolatePoints(top, mid, mid.y-top.y+1);
@@ -210,19 +213,19 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 	std::vector<CanvasPoint> right = interpolatePoints(top, split, mid.y-top.y+1);
 	std::vector<TexturePoint> rightTexture = interpolatePoints(top.texturePoint, split.texturePoint, mid.y-top.y+1);
 
-	for (float a = 0.0; a < left.size(); a++) {
-		int steps = (int) abs(left[a].x - right[a].x);
+	for (float i = 0.0; i < left.size(); i++) {
+		int steps = (int) abs(left[i].x - right[i].x);
 				
-		std::vector<CanvasPoint> points = interpolatePoints(left[a], right[a], steps+1);
+		std::vector<CanvasPoint> points = interpolatePoints(left[i], right[i], steps+1);
 
-		std::vector<TexturePoint> texturePoints = interpolatePoints(leftTexture[a], rightTexture[a], steps+1);
+		std::vector<TexturePoint> texturePoints = interpolatePoints(leftTexture[i], rightTexture[i], steps+1);
 
 		for (int c = 0; c < steps; c++) {
 			int x_coord = int(texturePoints.at(c).x);
 			int y_coord = int(texturePoints.at(c).y);
 			uint32_t col = texture.pixels.at((y_coord*texture.width) + x_coord);
 
-			window.setPixelColour(round(points[c].x), round(points[c].y), col);
+			window.setPixelColour(round(points[c].x), round(points[i].y), col);
 		}
 
 	}
@@ -235,20 +238,20 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 	std::vector<CanvasPoint> right2 = interpolatePoints(bot, split, bot.y-mid.y+1);
 	std::vector<TexturePoint> rightTexture2 = interpolatePoints(bot.texturePoint, split.texturePoint, bot.y-mid.y+1);
 
-	for (float a = 0.0; a < left2.size(); a++) {
-		int steps = (int) abs(left2[a].x - right2[a].x);
+	for (float i = 0.0; i < left2.size(); i++) {
+		int steps = (int) abs(left2[i].x - right2[i].x);
 				
-		std::vector<CanvasPoint> points = interpolatePoints(left2[a], right2[a], steps+1);
+		std::vector<CanvasPoint> points = interpolatePoints(left2[i], right2[i], steps+1);
 
-		std::vector<TexturePoint> texturePoints = interpolatePoints(leftTexture2[a], rightTexture2[a], steps+1);
+		std::vector<TexturePoint> texturePoints = interpolatePoints(leftTexture2[i], rightTexture2[i], steps+1);
 
 		for (int c = 0; c < steps; c++) {
 
 			int x_coord = int(texturePoints.at(c).x);
 			int y_coord = int(texturePoints.at(c).y);
-			uint32_t col = texture.pixels.at((y_coord*texture.width) + x_coord);
+			uint32_t col = texture.pixels.at(int((y_coord*texture.width) + x_coord));
 
-			window.setPixelColour(round(points[c].x), round(points[c].y), col);
+			window.setPixelColour(round(points[c].x), round(points[i].y), col);
 		}
 
 	}
