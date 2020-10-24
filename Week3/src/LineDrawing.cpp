@@ -174,54 +174,65 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 		std::swap(bot.x, mid.x);
 	}
 
+	float xDiff = bot.x - top.x;
+	float yDiff = bot.y - top.y;
+
+	float stepsDiff = std::max(abs(xDiff), abs(yDiff));
+
+	std::vector<CanvasPoint> middle = interpolatePoints(top, bot, stepsDiff);
 	CanvasPoint split;
 	split.y = mid.y;
 
 	split.x = round(top.x + ((mid.y - top.y)/(bot.y-top.y)) * (bot.x-top.x));
 
-	split.texturePoint = TexturePoint(round(top.texturePoint.x + ((mid.texturePoint.y - top.texturePoint.y)/(bot.texturePoint.y-top.texturePoint.y)) * (bot.texturePoint.x-top.texturePoint.x)), 
-		round(top.texturePoint.y + ((mid.texturePoint.y - top.texturePoint.y)/(bot.texturePoint.y-top.texturePoint.y)) * (bot.texturePoint.y-top.texturePoint.y)));
+	float scale = (top.y-mid.y)/(top.y-bot.y);
 
+	split.texturePoint.x = top.texturePoint.x - scale * (bot.texturePoint.x - top.texturePoint.x);
+	split.texturePoint.y = top.texturePoint.y - scale * (bot.texturePoint.y - top.texturePoint.y);
 
 	// TOP TRIANGLE ---------------------------------------------------------------------------------------------------------------------------------------------------
-	int height = mid.y - top.y;
 
-	std::vector<CanvasPoint> starts = interpolatePoints(top, mid, height);
-	std::vector<CanvasPoint> ends = interpolatePoints(top, split, height);
-	std::vector<CanvasPoint> textStarts = interpolatePoints(CanvasPoint(top.x, top.y), CanvasPoint(mid.x, mid.y), height);
-	std::vector<CanvasPoint> textEnds = interpolatePoints(CanvasPoint(top.x, top.y), CanvasPoint(split.x, split.y), height);
+	std::vector<CanvasPoint> left = interpolatePoints(top, split, mid.y-top.y+1);
+	std::vector<CanvasPoint> right = interpolatePoints(top, mid, mid.y-top.y+1);
 
-	for (int y = 0; y < height; y++) {
-		int width = ends.at(y).x - starts.at(y).x;
+	for (float a = 0.0; a < left.size(); a++) {
+		int steps = (int) abs(left[a].x - right[a].x);
+				
+		std::vector<CanvasPoint> points = interpolatePoints(left[a], right[a], steps+1);
 
-		std::vector<CanvasPoint> line = interpolatePoints(textStarts.at(y), textEnds.at(y), width);
-		for (int x=0; x < width; x++) {
-			int x_coord = int(line.at(x).x);
-			int y_coord = int(line.at(x).y);
+		for (int c = 0; c < steps; c++) {
+
+			int x_coord = int(points.at(c).x);
+			int y_coord = int(points.at(c).y);
 			uint32_t col = texture.pixels.at((y_coord*texture.width) + x_coord);
-			window.setPixelColour(starts.at(y).x+x, starts.at(y).y, col);
+
+			window.setPixelColour((int)points[c].x, (int)points[c].y, col);
 		}
+
 	}
 
 	// BOTTOM TRIANGLE ------------------------------------------------------------------------------------------------------------------------------------------------
-	int height2 = bot.y - mid.y;
 
-	std::vector<CanvasPoint> starts2 = interpolatePoints(mid, bot, height2);
-	std::vector<CanvasPoint> ends2 = interpolatePoints(split, bot, height2);
-	std::vector<CanvasPoint> textStarts2 = interpolatePoints(CanvasPoint(mid.x, mid.y), CanvasPoint(bot.x, bot.y), height2);
-	std::vector<CanvasPoint> textEnds2 = interpolatePoints(CanvasPoint(split.x, split.y), CanvasPoint(bot.x, bot.y), height2);
+	std::vector<CanvasPoint> left2 = interpolatePoints(bot, split, bot.y-mid.y+1);
+	std::vector<CanvasPoint> right2 = interpolatePoints(bot, mid, bot.y-mid.y+1);
 
-	for (int y = 0; y < height2; y++) {
-		int width = ends2.at(y).x - starts2.at(y).x;
+	for (float a = 0.0; a < left2.size(); a++) {
+		int steps = (int) abs(left2[a].x - right2[a].x);
+				
+		std::vector<CanvasPoint> points = interpolatePoints(left2[a], right2[a], steps+1);
 
-		std::vector<CanvasPoint> line = interpolatePoints(textStarts2.at(y), textEnds2.at(y), width);
-		for (int x=0; x < width; x++) {
-			int x_coord = int(line.at(x).x);
-			int y_coord = int(line.at(x).y);
+		for (int c = 0; c < steps; c++) {
+
+			int x_coord = int(points.at(c).x);
+			int y_coord = int(points.at(c).y);
 			uint32_t col = texture.pixels.at((y_coord*texture.width) + x_coord);
-			window.setPixelColour(starts2.at(y).x+x, starts2.at(y).y-1, col);
+
+			window.setPixelColour((int)points[c].x, (int)points[c].y, col);
 		}
+
 	}
+
+	drawTriangle(window, triangle, Colour(255,255,255));
 
 }
 
