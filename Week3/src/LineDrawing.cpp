@@ -38,6 +38,18 @@ std::vector<CanvasPoint> interpolatePoints(CanvasPoint start, CanvasPoint end, i
     return points;
 }
 
+std::vector<TexturePoint> interpolatePoints(TexturePoint start, TexturePoint end, int steps){
+    std::vector<TexturePoint> points;
+    for (int i=0; i<steps; i++){
+        TexturePoint p;
+        if (steps == 1) steps = 2;
+        p.x = start.x+((end.x-start.x)*i/(steps-1));
+        p.y = start.y+((end.y-start.y)*i/(steps-1));
+        points.push_back(p);
+    }
+    return points;
+}
+
 std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, int numVals) {
 	std::vector<glm::vec3> result;
 	float xStep = (to.x - from.x)/(numVals - 1);
@@ -185,49 +197,58 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 
 	split.x = round(top.x + ((mid.y - top.y)/(bot.y-top.y)) * (bot.x-top.x));
 
-	float scale = (top.y-mid.y)/(top.y-bot.y);
+	float scale = (mid.y - top.y)/(bot.y-top.y);
 
-	split.texturePoint.x = top.texturePoint.x - scale * (bot.texturePoint.x - top.texturePoint.x);
-	split.texturePoint.y = top.texturePoint.y - scale * (bot.texturePoint.y - top.texturePoint.y);
+	split.texturePoint.x = top.texturePoint.x + scale * (bot.texturePoint.x - top.texturePoint.x);
+	split.texturePoint.y = top.texturePoint.y + scale * (bot.texturePoint.y - top.texturePoint.y);
 
 	// TOP TRIANGLE ---------------------------------------------------------------------------------------------------------------------------------------------------
 
-	std::vector<CanvasPoint> left = interpolatePoints(top, split, mid.y-top.y+1);
-	std::vector<CanvasPoint> right = interpolatePoints(top, mid, mid.y-top.y+1);
+	std::vector<CanvasPoint> left = interpolatePoints(top, mid, mid.y-top.y+1);
+	std::vector<TexturePoint> leftTexture = interpolatePoints(top.texturePoint, mid.texturePoint, mid.y-top.y+1);
+
+	std::vector<CanvasPoint> right = interpolatePoints(top, split, mid.y-top.y+1);
+	std::vector<TexturePoint> rightTexture = interpolatePoints(top.texturePoint, split.texturePoint, mid.y-top.y+1);
 
 	for (float a = 0.0; a < left.size(); a++) {
 		int steps = (int) abs(left[a].x - right[a].x);
 				
 		std::vector<CanvasPoint> points = interpolatePoints(left[a], right[a], steps+1);
 
-		for (int c = 0; c < steps; c++) {
+		std::vector<TexturePoint> texturePoints = interpolatePoints(leftTexture[a], rightTexture[a], steps+1);
 
-			int x_coord = int(points.at(c).x);
-			int y_coord = int(points.at(c).y);
+		for (int c = 0; c < steps; c++) {
+			int x_coord = int(texturePoints.at(c).x);
+			int y_coord = int(texturePoints.at(c).y);
 			uint32_t col = texture.pixels.at((y_coord*texture.width) + x_coord);
 
-			window.setPixelColour((int)points[c].x, (int)points[c].y, col);
+			window.setPixelColour(round(points[c].x), round(points[c].y), col);
 		}
 
 	}
 
 	// BOTTOM TRIANGLE ------------------------------------------------------------------------------------------------------------------------------------------------
 
-	std::vector<CanvasPoint> left2 = interpolatePoints(bot, split, bot.y-mid.y+1);
-	std::vector<CanvasPoint> right2 = interpolatePoints(bot, mid, bot.y-mid.y+1);
+	std::vector<CanvasPoint> left2 = interpolatePoints(bot, mid, bot.y-mid.y+1);
+	std::vector<TexturePoint> leftTexture2 = interpolatePoints(bot.texturePoint, mid.texturePoint, bot.y-mid.y+1);
+
+	std::vector<CanvasPoint> right2 = interpolatePoints(bot, split, bot.y-mid.y+1);
+	std::vector<TexturePoint> rightTexture2 = interpolatePoints(bot.texturePoint, split.texturePoint, bot.y-mid.y+1);
 
 	for (float a = 0.0; a < left2.size(); a++) {
 		int steps = (int) abs(left2[a].x - right2[a].x);
 				
 		std::vector<CanvasPoint> points = interpolatePoints(left2[a], right2[a], steps+1);
 
+		std::vector<TexturePoint> texturePoints = interpolatePoints(leftTexture2[a], rightTexture2[a], steps+1);
+
 		for (int c = 0; c < steps; c++) {
 
-			int x_coord = int(points.at(c).x);
-			int y_coord = int(points.at(c).y);
+			int x_coord = int(texturePoints.at(c).x);
+			int y_coord = int(texturePoints.at(c).y);
 			uint32_t col = texture.pixels.at((y_coord*texture.width) + x_coord);
 
-			window.setPixelColour((int)points[c].x, (int)points[c].y, col);
+			window.setPixelColour(round(points[c].x), round(points[c].y), col);
 		}
 
 	}
