@@ -27,27 +27,35 @@ std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
 }
 
 std::vector<CanvasPoint> interpolatePoints(CanvasPoint start, CanvasPoint end, int steps){
-    std::vector<CanvasPoint> points;
-    for (int i=0; i<steps; i++){
-        CanvasPoint p;
-        if (steps == 1) steps = 2;
-        p.x = start.x+((end.x-start.x)*i/(steps-1));
-        p.y = start.y+((end.y-start.y)*i/(steps-1));
-        points.push_back(p);
-    }
-    return points;
+	std::vector<CanvasPoint> result;
+	float stepX = (end.x - start.x)/(steps-1);
+	float stepY = (end.y - start.y)/(steps-1);
+
+	CanvasPoint temp = start;
+	result.push_back(temp);
+
+	for (int i = 0; i < steps-1; i++) {
+		temp.x = temp.x + stepX;
+		temp.y = temp.y + stepY;
+		result.push_back(temp);
+	}
+	return result;
 }
 
 std::vector<TexturePoint> interpolatePoints(TexturePoint start, TexturePoint end, int steps){
-    std::vector<TexturePoint> points;
-    for (int i=0; i<steps; i++){
-        TexturePoint p;
-        if (steps == 1) steps = 2;
-        p.x = start.x+((end.x-start.x)*i/(steps-1));
-        p.y = start.y+((end.y-start.y)*i/(steps-1));
-        points.push_back(p);
-    }
-    return points;
+	std::vector<TexturePoint> result;
+	float stepX = (end.x - start.x)/(steps-1);
+	float stepY = (end.y - start.y)/(steps-1);
+
+	TexturePoint temp = start;
+	result.push_back(temp);
+
+	for (int i = 0; i < steps-1; i++) {
+		temp.x = temp.x + stepX;
+		temp.y = temp.y + stepY;
+		result.push_back(temp);
+	}
+	return result;
 }
 
 std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, int numVals) {
@@ -213,7 +221,7 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 	std::vector<CanvasPoint> right = interpolatePoints(top, split, mid.y-top.y+1);
 	std::vector<TexturePoint> rightTexture = interpolatePoints(top.texturePoint, split.texturePoint, mid.y-top.y+1);
 
-	for (float i = 0.0; i < left.size(); i++) {
+	for (int i = 0; i < left.size(); i++) {
 		int steps = (int) abs(left[i].x - right[i].x);
 				
 		std::vector<CanvasPoint> points = interpolatePoints(left[i], right[i], steps+1);
@@ -225,7 +233,10 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 			int y_coord = int(texturePoints.at(c).y);
 			uint32_t col = texture.pixels.at((y_coord*texture.width) + x_coord);
 
-			window.setPixelColour(round(points[c].x), round(points[i].y), col);
+			std::cout << points[c].x << std::endl;
+			std::cout << points[i].y << std::endl;
+
+			window.setPixelColour(int(points[c].x), int(points[i].y), col);
 		}
 
 	}
@@ -238,7 +249,7 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 	std::vector<CanvasPoint> right2 = interpolatePoints(bot, split, bot.y-mid.y+1);
 	std::vector<TexturePoint> rightTexture2 = interpolatePoints(bot.texturePoint, split.texturePoint, bot.y-mid.y+1);
 
-	for (float i = 0.0; i < left2.size(); i++) {
+	for (int i = 0; i < left2.size(); i++) {
 		int steps = (int) abs(left2[i].x - right2[i].x);
 				
 		std::vector<CanvasPoint> points = interpolatePoints(left2[i], right2[i], steps+1);
@@ -251,10 +262,16 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 			int y_coord = int(texturePoints.at(c).y);
 			uint32_t col = texture.pixels.at(int((y_coord*texture.width) + x_coord));
 
-			window.setPixelColour(round(points[c].x), round(points[i].y), col);
+			window.setPixelColour(int(points[c].x), int(points[i].y), col);
+			std::cout << window.getPixelColour(int(points[c].x), int(points[i].y)) << std::endl;
 		}
 
 	}
+
+	// std::cout << window.getPixelColour(128, 150) << std::endl;
+	// std::cout << window.getPixelColour(129, 150) << std::endl;
+	// std::cout << window.getPixelColour(130, 150) << std::endl;
+	// std::cout << window.getPixelColour(1, 1) << std::endl;
 
 	drawTriangle(window, triangle, Colour(255,255,255));
 
