@@ -262,6 +262,24 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 
 }
 
+void drawVertices(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
+	glm::vec3 camera(0.0, 0.0, 4.0);
+	float distance = 300;
+
+	for (int i = 0; i < triangles.size(); i++) {
+		CanvasTriangle triangle;
+		for (int j = 0; j < 3; j++) {
+			int u = -(distance * triangles[i].vertices[j].x/(triangles[i].vertices[j].z - camera.z)) + (window.width / 2);
+			int v = (distance * triangles[i].vertices[j].y/(triangles[i].vertices[j].z - camera.z)) + (window.height / 2);
+
+			triangle.vertices[j] = CanvasPoint(u, v);
+		}
+		
+		drawTriangle(window, triangle, Colour(255,255,255));
+ 	}
+
+}
+
 std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unordered_map<std::string, Colour> colours) {
 	std::vector<ModelTriangle> output;
 	std::vector<glm::vec3> vertices;
@@ -313,8 +331,6 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename) {
 			std::string c = tokens[3];
 
 			Colour temp(int(stof(a)*255), int(stof(b)*255), int(stof(c)*255));
-			std::cout << colour << std::endl;
-			std::cout << temp << std::endl;
 			colours.insert({colour, temp});
 		}
 	}
@@ -384,11 +400,9 @@ int main(int argc, char *argv[]) {
 	std::unordered_map<std::string, Colour> colours;
 
 	colours = parseMtl("cornell-box.mtl");
-	triangles = parseObj("cornell-box.obj", 0.17, colours);
+	triangles = parseObj("cornell-box.obj", 0.4, colours);
 
-	for (auto const& pair: colours) {
-		std::cout << pair.first << " " <<  pair.second << std::endl;
-	}
+	drawVertices(window, triangles);
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
