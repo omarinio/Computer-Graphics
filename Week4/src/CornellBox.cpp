@@ -9,6 +9,7 @@
 #include <vector>
 #include <glm/vec3.hpp> // glm::vec3
 #include <glm/gtx/string_cast.hpp>
+#include <unordered_map>
 
 #define WIDTH 320
 #define HEIGHT 240
@@ -261,7 +262,7 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 
 }
 
-std::vector<ModelTriangle> parseObj(std::string filename, float scale) {
+std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unordered_map<std::string, Colour> colours) {
 	std::vector<ModelTriangle> output;
 	std::vector<glm::vec3> vertices;
 
@@ -292,8 +293,8 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale) {
 	return output;
 }
 
-std::vector<Colour> parseMtl(std::string filename) {
-	std::vector<Colour> colours;
+std::unordered_map<std::string, Colour> parseMtl(std::string filename) {
+	std::unordered_map<std::string, Colour> colours;
 	std::string colour;
 
 	std::ifstream File(filename);
@@ -311,8 +312,10 @@ std::vector<Colour> parseMtl(std::string filename) {
 			std::string b = tokens[2];
 			std::string c = tokens[3];
 
-			Colour temp(colour, int(stof(a)*255), int(stof(b)*255), int(stof(c)*255));
-			colours.push_back(temp);
+			Colour temp(int(stof(a)*255), int(stof(b)*255), int(stof(c)*255));
+			std::cout << colour << std::endl;
+			std::cout << temp << std::endl;
+			colours.insert({colour, temp});
 		}
 	}
 
@@ -378,13 +381,13 @@ int main(int argc, char *argv[]) {
 	SDL_Event event;
 
 	std::vector<ModelTriangle> triangles;
-	std::vector<Colour> colours;
+	std::unordered_map<std::string, Colour> colours;
 
-	triangles = parseObj("cornell-box.obj", 0.17);
 	colours = parseMtl("cornell-box.mtl");
+	triangles = parseObj("cornell-box.obj", 0.17, colours);
 
-	for (int i=0; i < colours.size(); i++) {
-		std::cout << colours[i].name << std::endl;
+	for (auto const& pair: colours) {
+		std::cout << pair.first << " " <<  pair.second << std::endl;
 	}
 
 	while (true) {
