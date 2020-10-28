@@ -292,6 +292,33 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale) {
 	return output;
 }
 
+std::vector<Colour> parseMtl(std::string filename) {
+	std::vector<Colour> colours;
+	std::string colour;
+
+	std::ifstream File(filename);
+	std::string line;
+
+	while(std::getline(File, line)) {
+		if(line == "") continue;
+
+		std::vector<std::string> tokens = split(line, ' ');
+
+		if (tokens[0] == "newmtl") {
+			colour = tokens[1];
+		} else if (tokens[0] == "Kd") {
+			std::string a = tokens[1];
+			std::string b = tokens[2];
+			std::string c = tokens[3];
+
+			Colour temp(colour, int(stof(a)*255), int(stof(b)*255), int(stof(c)*255));
+			colours.push_back(temp);
+		}
+	}
+
+	return colours;
+}
+
 void draw(DrawingWindow &window) {
 	for (size_t y = 0; y < window.height; y++) {
 		for (size_t x = 0; x < window.width; x++) {
@@ -351,12 +378,13 @@ int main(int argc, char *argv[]) {
 	SDL_Event event;
 
 	std::vector<ModelTriangle> triangles;
+	std::vector<Colour> colours;
 
 	triangles = parseObj("cornell-box.obj", 0.17);
+	colours = parseMtl("cornell-box.mtl");
 
-	for (int i=0; i < triangles.size(); i++) {
-		std::cout << i << std::endl;
-		std::cout << triangles[i] << std::endl;
+	for (int i=0; i < colours.size(); i++) {
+		std::cout << colours[i].name << std::endl;
 	}
 
 	while (true) {
