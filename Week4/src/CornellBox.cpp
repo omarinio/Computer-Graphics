@@ -172,7 +172,6 @@ void drawFilledTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour c
 
 	fillHalf(window, triangle1, colour);
 	fillHalf(window, triangle2, colour);
-	drawTriangle(window, triangle, Colour(255,255,255));
 
 }
 
@@ -262,7 +261,7 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 
 }
 
-void drawVertices(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
+void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 	glm::vec3 camera(0.0, 0.0, 4.0);
 	float distance = 300;
 
@@ -280,9 +279,29 @@ void drawVertices(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 
 }
 
+void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
+	glm::vec3 camera(0.0, 0.0, 4.0);
+	float distance = 300;
+
+	for (int i = 0; i < triangles.size(); i++) {
+		CanvasTriangle triangle;
+		for (int j = 0; j < 3; j++) {
+			int u = -(distance * triangles[i].vertices[j].x/(triangles[i].vertices[j].z - camera.z)) + (window.width / 2);
+			int v = (distance * triangles[i].vertices[j].y/(triangles[i].vertices[j].z - camera.z)) + (window.height / 2);
+
+			triangle.vertices[j] = CanvasPoint(u, v);
+		}
+
+		drawFilledTriangle(window, triangle, triangles[i].colour);
+		
+ 	}
+
+}
+
 std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unordered_map<std::string, Colour> colours) {
 	std::vector<ModelTriangle> output;
 	std::vector<glm::vec3> vertices;
+	std::string colour;
 
 	std::ifstream File(filename);
 	std::string line;
@@ -301,8 +320,10 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			std::string b = tokens[2];
 			std::string c = tokens[3];
 			
-			ModelTriangle triangle(vertices[stoi(a)-1], vertices[stoi(b)-1], vertices[stoi(c)-1], Colour(255,0,0));
+			ModelTriangle triangle(vertices[stoi(a)-1], vertices[stoi(b)-1], vertices[stoi(c)-1], colours[colour]);
 			output.push_back(triangle);
+		} else if (tokens[0] == "usemtl") {
+			colour = tokens[1];
 		}
 	}
 
@@ -402,7 +423,7 @@ int main(int argc, char *argv[]) {
 	colours = parseMtl("cornell-box.mtl");
 	triangles = parseObj("cornell-box.obj", 0.4, colours);
 
-	drawVertices(window, triangles);
+	drawCornell(window, triangles);
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
