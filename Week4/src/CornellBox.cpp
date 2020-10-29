@@ -11,8 +11,11 @@
 #include <glm/gtx/string_cast.hpp>
 #include <unordered_map>
 
-#define WIDTH 320
-#define HEIGHT 240
+#define WIDTH 600
+#define HEIGHT 600
+
+glm::vec3 camera(0.0, 0.0, 4.0);
+float distance = 700;
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
 	std::vector<float> result;
@@ -32,13 +35,16 @@ std::vector<CanvasPoint> interpolatePoints(CanvasPoint start, CanvasPoint end, i
 	std::vector<CanvasPoint> result;
 	float stepX = (end.x - start.x)/(steps-1);
 	float stepY = (end.y - start.y)/(steps-1);
-
+	float stepDepth = (end.depth - start.depth)/(steps-1);
+	
 	CanvasPoint temp = start;
 	result.push_back(temp);
 
 	for (int i = 0; i < steps-1; i++) {
 		temp.x = temp.x + stepX;
 		temp.y = temp.y + stepY;
+		temp.depth = temp.depth + stepDepth;
+
 		result.push_back(temp);
 	}
 	return result;
@@ -261,10 +267,86 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 
 }
 
-void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
-	glm::vec3 camera(0.0, 0.0, 4.0);
-	float distance = 300;
+void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, std::vector<std::vector<float>> &depths) {
+	CanvasPoint top = triangle.vertices[0];
+	CanvasPoint mid = triangle.vertices[1];
+	CanvasPoint bot = triangle.vertices[2];
 
+	if (bot.y < mid.y) {
+		std::swap(bot.y, mid.y);
+		std::swap(bot.x, mid.x);
+		std::swap(bot.depth, mid.depth);
+	}
+
+	if (mid.y < top.y) {
+		std::swap(mid.y, top.y);
+		std::swap(mid.x, top.x);
+		std::swap(mid.depth, top.depth);
+	}
+
+	if (bot.y < mid.y) {
+		std::swap(bot.y, mid.y);
+		std::swap(bot.x, mid.x);
+		std::swap(bot.depth, mid.depth);
+	}
+	CanvasPoint split;
+	split.y = mid.y;
+
+	split.x = round(top.x + ((mid.y - top.y)/(bot.y-top.y)) * (bot.x-top.x));
+
+	split.depth = top.depth + ((mid.y - top.y)/(bot.y-top.y)) * (bot.depth-top.depth);
+
+	// TOP TRIANGLE ---------------------------------------------------------------------------------------------------------------------------------------------------
+
+	std::vector<CanvasPoint> left = interpolatePoints(top, mid, mid.y-top.y+2);
+
+	std::vector<CanvasPoint> right = interpolatePoints(top, split, mid.y-top.y+2);
+
+	for (int i = 0; i < left.size(); i++) {
+		int steps = abs(left[i].x - right[i].x);
+				
+		std::vector<CanvasPoint> points = interpolatePoints(left[i], right[i], steps+2);
+
+		for (int c = 0; c < points.size(); c++) {
+
+			if (1/points[c].depth < depths[round(points[c].x)][round(points[c].y)]) {
+
+				depths[round(points[c].x)][round(points[c].y)] = 1/points[c].depth;
+				uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+				window.setPixelColour(round(points[c].x), round(points[c].y), set);
+			}
+
+		}
+
+	}
+
+	// BOTTOM TRIANGLE ------------------------------------------------------------------------------------------------------------------------------------------------
+
+	std::vector<CanvasPoint> left2 = interpolatePoints(bot, mid, bot.y-mid.y+2);
+
+	std::vector<CanvasPoint> right2 = interpolatePoints(bot, split, bot.y-mid.y+2);
+
+	for (int i = 0; i < left2.size(); i++) {
+		int steps = abs(left2[i].x - right2[i].x);
+				
+		std::vector<CanvasPoint> points = interpolatePoints(left2[i], right2[i], steps+2);
+
+		for (int c = 0; c < points.size(); c++) {
+			
+			if (1/points[c].depth < depths[round(points[c].x)][round(points[c].y)]) {
+
+				depths[round(points[c].x)][round(points[c].y)] = 1/points[c].depth;
+				uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+				window.setPixelColour(round(points[c].x), round(points[c].y), set);
+			}
+
+		}
+
+	}
+
+}
+
+void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 	for (int i = 0; i < triangles.size(); i++) {
 		CanvasTriangle triangle;
 		for (int j = 0; j < 3; j++) {
@@ -279,9 +361,10 @@ void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> tria
 
 }
 
+
+
 void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
-	glm::vec3 camera(0.0, 0.0, 4.0);
-	float distance = 300;
+	std::vector<std::vector<float>> depths(window.width, std::vector<float> (window.height, std::numeric_limits<float>::infinity()));
 
 	for (int i = 0; i < triangles.size(); i++) {
 		CanvasTriangle triangle;
@@ -289,10 +372,10 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 			int u = -(distance * triangles[i].vertices[j].x/(triangles[i].vertices[j].z - camera.z)) + (window.width / 2);
 			int v = (distance * triangles[i].vertices[j].y/(triangles[i].vertices[j].z - camera.z)) + (window.height / 2);
 
-			triangle.vertices[j] = CanvasPoint(u, v);
+			triangle.vertices[j] = CanvasPoint(u, v, triangles[i].vertices[j].z - camera.z);
 		}
 
-		drawFilledTriangle(window, triangle, triangles[i].colour);
+		fillCornell(window, triangle, triangles[i].colour, depths);
 		
  	}
 
