@@ -309,9 +309,9 @@ void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, 
 
 		for (int c = 0; c < points.size(); c++) {
 
-			if (1/points[c].depth < depths[round(points[c].x)][round(points[c].y)]) {
+			if (-1/points[c].depth > depths[round(points[c].x)][round(points[c].y)]) {
 
-				depths[round(points[c].x)][round(points[c].y)] = 1/points[c].depth;
+				depths[round(points[c].x)][round(points[c].y)] = -1/points[c].depth;
 				uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
 				window.setPixelColour(round(points[c].x), round(points[c].y), set);
 			}
@@ -333,9 +333,9 @@ void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, 
 
 		for (int c = 0; c < points.size(); c++) {
 			
-			if (1/points[c].depth < depths[round(points[c].x)][round(points[c].y)]) {
+			if (-1/points[c].depth > depths[round(points[c].x)][round(points[c].y)]) {
 
-				depths[round(points[c].x)][round(points[c].y)] = 1/points[c].depth;
+				depths[round(points[c].x)][round(points[c].y)] = -1/points[c].depth;
 				uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
 				window.setPixelColour(round(points[c].x), round(points[c].y), set);
 			}
@@ -364,7 +364,7 @@ void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> tria
 
 
 void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
-	std::vector<std::vector<float>> depths(window.width, std::vector<float> (window.height, std::numeric_limits<float>::infinity()));
+	std::vector<std::vector<float>> depths(window.width, std::vector<float> (window.height, -std::numeric_limits<float>::infinity()));
 
 	for (int i = 0; i < triangles.size(); i++) {
 		CanvasTriangle triangle;
