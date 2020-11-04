@@ -7,9 +7,11 @@
 #include <Utils.h>
 #include <fstream>
 #include <vector>
+#include <glm/vec2.hpp> // glm::vec2
 #include <glm/vec3.hpp> // glm::vec3
 #include <glm/gtx/string_cast.hpp>
 #include <unordered_map>
+
 
 #define WIDTH 600
 #define HEIGHT 600
@@ -108,77 +110,6 @@ void drawTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour)
 	drawLine(window, triangle[0], triangle[1], colour);
 	drawLine(window, triangle[1], triangle[2], colour);
 	drawLine(window, triangle[2], triangle[0], colour);
-}
-
-void fillHalf(DrawingWindow &window, CanvasTriangle triangle, Colour colour) {
-	CanvasPoint top = triangle[0];
-	CanvasPoint mid = triangle[1];
-	CanvasPoint bot = triangle[2];
-
-	float x1Diff = mid.x - top.x;
-	float y1Diff = mid.y - top.y;
-
-	float x2Diff = bot.x - top.x;
-	float y2Diff = bot.y - top.y;
-
-	float steps1 = std::max(abs(x1Diff), abs(y1Diff));
-	float steps2 = std::max(abs(x2Diff), abs(y2Diff));
-
-	float x1Step = x1Diff/steps1;
-	float x2Step = x2Diff/steps2;
-
-	float y1Step = y1Diff/steps1;
-	float y2Step = y2Diff/steps2;
-
-	for (float i = 0.0; i < steps1; i++) {
-		for (float j = 0.0; j < steps2; j++) {
-			float x1 = top.x + (x1Step * i);
-			float y1 = top.y + (y1Step * i);
-
-			float x2 = top.x + (x2Step * j);
-			float y2 = top.y + (y2Step * j);
-
-			CanvasPoint point1(round(x1), round(y1));
-			CanvasPoint point2(round(x2), round(y2));
-			
-			drawLine(window, point1, point2, colour);
-		}
-	}
-}
-
-void drawFilledTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour) {
-	CanvasPoint top = triangle.vertices[0];
-	CanvasPoint mid = triangle.vertices[1];
-	CanvasPoint bot = triangle.vertices[2];
-
-	if (bot.y < mid.y) {
-		std::swap(bot.y, mid.y);
-		std::swap(bot.x, mid.x);
-	}
-
-	if (mid.y < top.y) {
-		std::swap(mid.y, top.y);
-		std::swap(mid.x, top.x);
-	}
-
-	if (bot.y < mid.y) {
-		std::swap(bot.y, mid.y);
-		std::swap(bot.x, mid.x);
-	}
-
-	// getting flat coords
-
-	CanvasPoint split;
-	split.y = mid.y;
-
-	split.x = round(top.x + ((mid.y - top.y)/(bot.y-top.y)) * (bot.x-top.x));
-
-	CanvasTriangle triangle1(top, mid, split);
-	CanvasTriangle triangle2(mid, split, bot);
-
-	fillHalf(window, triangle1, colour);
-	fillHalf(window, triangle2, colour);
-
 }
 
 void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap texture) {
@@ -306,15 +237,19 @@ void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, 
 		int steps = abs(left[i].x - right[i].x);
 				
 		std::vector<CanvasPoint> points = interpolatePoints(left[i], right[i], steps+2);
-
+		
 		for (int c = 0; c < points.size(); c++) {
+			int newX = round(points[c].x);
+			int newY = round(points[c].y);
+			if (newX >= 0 && newX < window.width && newY >= 0 && newY < window.height){
+				if (-1/points[c].depth > depths[newX][newY]) {
 
-			if (-1/points[c].depth > depths[round(points[c].x)][round(points[c].y)]) {
-
-				depths[round(points[c].x)][round(points[c].y)] = -1/points[c].depth;
-				uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
-				window.setPixelColour(round(points[c].x), round(points[c].y), set);
+					depths[newX][newY] = -1/points[c].depth;
+					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+					window.setPixelColour(newX, newY, set);
+				}
 			}
+			
 
 		}
 
@@ -332,13 +267,17 @@ void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, 
 		std::vector<CanvasPoint> points = interpolatePoints(left2[i], right2[i], steps+2);
 
 		for (int c = 0; c < points.size(); c++) {
-			
-			if (-1/points[c].depth > depths[round(points[c].x)][round(points[c].y)]) {
+			int newX = round(points[c].x);
+			int newY = round(points[c].y);
+			if (newX >= 0 && newX < window.width && newY >= 0 && newY < window.height){
+				if (-1/points[c].depth > depths[newX][newY]) {
 
-				depths[round(points[c].x)][round(points[c].y)] = -1/points[c].depth;
-				uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
-				window.setPixelColour(round(points[c].x), round(points[c].y), set);
+					depths[newX][newY] = -1/points[c].depth;
+					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+					window.setPixelColour(newX, newY, set);
+				}
 			}
+			
 
 		}
 
@@ -369,8 +308,8 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 	for (int i = 0; i < triangles.size(); i++) {
 		CanvasTriangle triangle;
 		for (int j = 0; j < 3; j++) {
-			int u = -(distance * triangles[i].vertices[j].x/(triangles[i].vertices[j].z - camera.z)) + (window.width / 2);
-			int v = (distance * triangles[i].vertices[j].y/(triangles[i].vertices[j].z - camera.z)) + (window.height / 2);
+			int u = -(distance * (triangles[i].vertices[j].x - camera.x)/(triangles[i].vertices[j].z - camera.z)) + (window.width / 2);
+			int v = (distance * (triangles[i].vertices[j].y - camera.y)/(triangles[i].vertices[j].z - camera.z)) + (window.height / 2);
 
 			triangle.vertices[j] = CanvasPoint(u, v, triangles[i].vertices[j].z - camera.z);
 		}
@@ -384,6 +323,7 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unordered_map<std::string, Colour> colours) {
 	std::vector<ModelTriangle> output;
 	std::vector<glm::vec3> vertices;
+	std::vector<TexturePoint> textureVertices;
 	std::string colour;
 
 	std::ifstream File(filename);
@@ -399,14 +339,26 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			vertices.push_back(temp);
 
 		} else if (tokens[0] == "f") {
-			std::string a = tokens[1];
-			std::string b = tokens[2];
-			std::string c = tokens[3];
-			
-			ModelTriangle triangle(vertices[stoi(a)-1], vertices[stoi(b)-1], vertices[stoi(c)-1], colours[colour]);
-			output.push_back(triangle);
+			// when no texture map vertices, the second vector item is equal to ""
+			std::vector<std::string> a = split(tokens[1],'/');
+			std::vector<std::string> b = split(tokens[2],'/');
+			std::vector<std::string> c = split(tokens[3],'/');
+
+			if (a[1] == "") {
+				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
+				output.push_back(triangle);
+			} else {
+				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
+				triangle.texturePoints[0] = textureVertices[stoi(a[1])-1];
+				triangle.texturePoints[1] = textureVertices[stoi(b[1])-1];
+				triangle.texturePoints[2] = textureVertices[stoi(c[1])-1];
+				output.push_back(triangle);
+			}
 		} else if (tokens[0] == "usemtl") {
 			colour = tokens[1];
+		} else if (tokens[0] == "vt") {
+			TexturePoint temp = TexturePoint(stof(tokens[1]), stof(tokens[2]));
+			textureVertices.push_back(temp);
 		}
 	}
 
@@ -436,6 +388,9 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename) {
 
 			Colour temp(int(stof(a)*255), int(stof(b)*255), int(stof(c)*255));
 			colours.insert({colour, temp});
+		} else if (tokens[0] == "map_Kd") {
+			TextureMap texture = TextureMap(tokens[1]);
+			// colours[colour] = readPP
 		}
 	}
 
@@ -443,6 +398,7 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename) {
 }
 
 void draw(DrawingWindow &window) {
+	window.clearPixels();
 	for (size_t y = 0; y < window.height; y++) {
 		for (size_t x = 0; x < window.width; x++) {
 			float red = rand() % 256;
@@ -459,40 +415,12 @@ void update(DrawingWindow &window) {
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
 	if (event.type == SDL_KEYDOWN) {
-		if (event.key.keysym.sym == SDLK_LEFT) std::cout << "LEFT" << std::endl;
-		else if (event.key.keysym.sym == SDLK_RIGHT) std::cout << "RIGHT" << std::endl;
-		else if (event.key.keysym.sym == SDLK_UP) std::cout << "UP" << std::endl;
-		else if (event.key.keysym.sym == SDLK_DOWN) std::cout << "DOWN" << std::endl; 
-		else if (event.key.keysym.sym == SDLK_u) {
-			CanvasTriangle triangle = CanvasTriangle(CanvasPoint(rand()%window.width, rand()%window.height), 
-				CanvasPoint(rand()%window.width, rand()%window.height), CanvasPoint(rand()%window.width, rand()%window.height));
-
-			Colour colour = Colour(rand()%256, rand()%256, rand()%256);
-			drawTriangle(window, triangle, colour); 
-		}
-		else if (event.key.keysym.sym == SDLK_f) {
-			CanvasTriangle triangle = CanvasTriangle(CanvasPoint(rand()%window.width, rand()%window.height), 
-				CanvasPoint(rand()%window.width, rand()%window.height), CanvasPoint(rand()%window.width, rand()%window.height));
-
-			Colour colour = Colour(rand()%256, rand()%256, rand()%256);
-			drawFilledTriangle(window, triangle, colour); 
-		}
-		else if (event.key.keysym.sym == SDLK_t) {
-			TextureMap texture = TextureMap("texture.ppm");
-			CanvasPoint p1(160, 10);
-			CanvasPoint p2(300,230);
-			CanvasPoint p3(10, 150);
-
-			p1.texturePoint = TexturePoint(195, 5);
-			p2.texturePoint = TexturePoint(395, 380);
-			p3.texturePoint = TexturePoint(65, 330); 
-
-			CanvasTriangle triangle(p1, p2, p3);
-
-			textureFill(window, triangle, texture);
-
-		}
-		
+		if (event.key.keysym.sym == SDLK_LEFT) camera.x += 0.1;
+		else if (event.key.keysym.sym == SDLK_RIGHT) camera.x -= 0.1;
+		else if (event.key.keysym.sym == SDLK_UP) camera.y -= 0.1;
+		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 0.1;
+		else if (event.key.keysym.sym == SDLK_s) camera.z += 0.1;
+		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) window.savePPM("output.ppm");
 }
 
@@ -506,13 +434,12 @@ int main(int argc, char *argv[]) {
 	colours = parseMtl("cornell-box.mtl");
 	triangles = parseObj("cornell-box.obj", 0.4, colours);
 
-	drawCornell(window, triangles);
-
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
 		if (window.pollForInputEvents(event)) handleEvent(event, window);
 		update(window);
 		draw(window);
+		drawCornell(window, triangles);
 
 		// Need to render the frame at the end, or nothing actually gets shown on the screen !
 		window.renderFrame();
