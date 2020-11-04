@@ -16,6 +16,8 @@
 #define WIDTH 600
 #define HEIGHT 600
 
+#define PI 3.141
+
 glm::vec3 camera(0.0, 0.0, 4.0);
 float distance = 700;
 
@@ -421,6 +423,24 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 0.1;
 		else if (event.key.keysym.sym == SDLK_s) camera.z += 0.1;
 		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
+		else if (event.key.keysym.sym == SDLK_r) {
+			float theta = -4*PI/180;
+			glm::mat3 m = glm::mat3(
+				1, 0, 0,
+				0, cos(theta), -sin(theta),
+				0, sin(theta), cos(theta)
+			);
+			camera = camera * m;
+		}
+		else if (event.key.keysym.sym == SDLK_f) {
+			float theta = 4*PI/180;
+			glm::mat3 m = glm::mat3(
+				cos(theta), 0, sin(theta),
+				0, 1, 0,
+				-sin(theta), 0, cos(theta)
+			);
+			camera = camera * m;
+		}
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) window.savePPM("output.ppm");
 }
 
