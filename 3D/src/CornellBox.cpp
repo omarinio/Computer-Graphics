@@ -7,19 +7,23 @@
 #include <Utils.h>
 #include <fstream>
 #include <vector>
-#include <glm/vec2.hpp> // glm::vec2
-#include <glm/vec3.hpp> // glm::vec3
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp> 
 #include <glm/gtx/string_cast.hpp>
 #include <unordered_map>
-
 
 #define WIDTH 600
 #define HEIGHT 600
 
-#define PI 3.141
+#define PI 3.14159265359
 
 glm::vec3 camera(0.0, 0.0, 4.0);
 float distance = 700;
+glm::mat3 cameraOrientation(
+	glm::vec3(1.0, 0.0, 0.0),
+	glm::vec3(0.0, 1.0, 0.0),
+	glm::vec3(0.0, 0.0, 1.0)
+);
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
 	std::vector<float> result;
@@ -313,7 +317,11 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 			int u = -(distance * (triangles[i].vertices[j].x - camera.x)/(triangles[i].vertices[j].z - camera.z)) + (window.width / 2);
 			int v = (distance * (triangles[i].vertices[j].y - camera.y)/(triangles[i].vertices[j].z - camera.z)) + (window.height / 2);
 
-			triangle.vertices[j] = CanvasPoint(u, v, triangles[i].vertices[j].z - camera.z);
+			glm::vec3 cameraToVertex = glm::vec3(u, v, triangles[i].vertices[j].z - camera.z);
+
+			glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
+
+			triangle.vertices[j] = CanvasPoint(adjustedVector.x, adjustedVector.y, adjustedVector.z);
 		}
 
 		fillCornell(window, triangle, triangles[i].colour, depths);
@@ -432,8 +440,26 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 			);
 			camera = camera * m;
 		}
+		else if (event.key.keysym.sym == SDLK_e) {
+			float theta = 4*PI/180;
+			glm::mat3 m = glm::mat3(
+				1, 0, 0,
+				0, cos(theta), -sin(theta),
+				0, sin(theta), cos(theta)
+			);
+			camera = camera * m;
+		}
 		else if (event.key.keysym.sym == SDLK_f) {
 			float theta = 4*PI/180;
+			glm::mat3 m = glm::mat3(
+				cos(theta), 0, sin(theta),
+				0, 1, 0,
+				-sin(theta), 0, cos(theta)
+			);
+			camera = camera * m;
+		}
+		else if (event.key.keysym.sym == SDLK_g) {
+			float theta = -4*PI/180;
 			glm::mat3 m = glm::mat3(
 				cos(theta), 0, sin(theta),
 				0, 1, 0,
