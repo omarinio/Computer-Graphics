@@ -330,6 +330,16 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 
 }
 
+void lookAt(DrawingWindow &window) {
+	glm::vec3 forward = glm::normalize(camera - glm::vec3(0,0,0));
+	glm::vec3 right = glm::normalize(glm::cross(glm::vec3(0,1,0), forward));
+	glm::vec3 up = glm::normalize(glm::cross(forward, right));
+
+	cameraOrientation[0] = right;
+	cameraOrientation[1] = up;
+	cameraOrientation[2] = forward;
+}
+
 std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unordered_map<std::string, Colour> colours) {
 	std::vector<ModelTriangle> output;
 	std::vector<glm::vec3> vertices;
@@ -421,6 +431,7 @@ void draw(DrawingWindow &window) {
 
 void update(DrawingWindow &window) {
 	// Function for performing animation (shifting artifacts or moving the camera)
+	lookAt(window);
 }
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
@@ -433,7 +444,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
 		// CAMERA ROTATION
 		else if (event.key.keysym.sym == SDLK_r) {
-			float theta = -4*PI/180;
+			float theta = -PI/180;
 			glm::mat3 m = glm::mat3(
 				1, 0, 0,
 				0, cos(theta), -sin(theta),
@@ -442,7 +453,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 			camera = camera * m;
 		}
 		else if (event.key.keysym.sym == SDLK_e) {
-			float theta = 4*PI/180;
+			float theta = PI/180;
 			glm::mat3 m = glm::mat3(
 				1, 0, 0,
 				0, cos(theta), -sin(theta),
@@ -451,7 +462,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 			camera = camera * m;
 		}
 		else if (event.key.keysym.sym == SDLK_f) {
-			float theta = 4*PI/180;
+			float theta = PI/180;
 			glm::mat3 m = glm::mat3(
 				cos(theta), 0, sin(theta),
 				0, 1, 0,
@@ -460,7 +471,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 			camera = camera * m;
 		}
 		else if (event.key.keysym.sym == SDLK_g) {
-			float theta = -4*PI/180;
+			float theta = -PI/180;
 			glm::mat3 m = glm::mat3(
 				cos(theta), 0, sin(theta),
 				0, 1, 0,
@@ -504,6 +515,9 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 				glm::vec3(-sin(theta), 0, cos(theta))
 			);
 			cameraOrientation = cameraOrientation * m;
+		}
+		else if (event.key.keysym.sym == SDLK_q) {
+			lookAt(window);
 		}
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) window.savePPM("output.ppm");
 }
