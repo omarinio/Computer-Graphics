@@ -314,14 +314,14 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 	for (int i = 0; i < triangles.size(); i++) {
 		CanvasTriangle triangle;
 		for (int j = 0; j < 3; j++) {
-			int u = -(distance * (triangles[i].vertices[j].x - camera.x)/(triangles[i].vertices[j].z - camera.z)) + (window.width / 2);
-			int v = (distance * (triangles[i].vertices[j].y - camera.y)/(triangles[i].vertices[j].z - camera.z)) + (window.height / 2);
-
-			glm::vec3 cameraToVertex = glm::vec3(u, v, triangles[i].vertices[j].z - camera.z);
+			glm::vec3 cameraToVertex = glm::vec3(triangles[i].vertices[j].x - camera.x, triangles[i].vertices[j].y - camera.y, triangles[i].vertices[j].z - camera.z);
 
 			glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
 
-			triangle.vertices[j] = CanvasPoint(adjustedVector.x, adjustedVector.y, adjustedVector.z);
+			int u = -(distance * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
+			int v = (distance * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
+
+			triangle.vertices[j] = CanvasPoint(u, v, adjustedVector.z);
 		}
 
 		fillCornell(window, triangle, triangles[i].colour, depths);
@@ -431,6 +431,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 0.1;
 		else if (event.key.keysym.sym == SDLK_s) camera.z += 0.1;
 		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
+		// CAMERA ROTATION
 		else if (event.key.keysym.sym == SDLK_r) {
 			float theta = -4*PI/180;
 			glm::mat3 m = glm::mat3(
@@ -466,6 +467,43 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 				-sin(theta), 0, cos(theta)
 			);
 			camera = camera * m;
+		}
+		// CAMERA ORIENTATION ROTATION
+		else if (event.key.keysym.sym == SDLK_u) {
+			float theta = 4*PI/180;
+			glm::mat3 m = glm::mat3(
+				glm::vec3(1, 0, 0),
+				glm::vec3(0, cos(theta), -sin(theta)),
+				glm::vec3(0, sin(theta), cos(theta))
+			);
+			cameraOrientation = cameraOrientation * m;
+		}
+		else if (event.key.keysym.sym == SDLK_j) {
+			float theta = -4*PI/180;
+			glm::mat3 m = glm::mat3(
+				glm::vec3(1, 0, 0),
+				glm::vec3(0, cos(theta), -sin(theta)),
+				glm::vec3(0, sin(theta), cos(theta))
+			);
+			cameraOrientation = cameraOrientation * m;
+		}
+		else if (event.key.keysym.sym == SDLK_k) {
+			float theta = -4*PI/180;
+			glm::mat3 m = glm::mat3(
+				glm::vec3(cos(theta), 0, sin(theta)),
+				glm::vec3(0, 1, 0),
+				glm::vec3(-sin(theta), 0, cos(theta))
+			);
+			cameraOrientation = cameraOrientation * m;
+		}
+		else if (event.key.keysym.sym == SDLK_h) {
+			float theta = 4*PI/180;
+			glm::mat3 m = glm::mat3(
+				glm::vec3(cos(theta), 0, sin(theta)),
+				glm::vec3(0, 1, 0),
+				glm::vec3(-sin(theta), 0, cos(theta))
+			);
+			cameraOrientation = cameraOrientation * m;
 		}
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) window.savePPM("output.ppm");
 }
