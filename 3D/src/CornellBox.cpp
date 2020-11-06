@@ -200,8 +200,6 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 
 	}
 
-	drawTriangle(window, triangle, Colour(255,255,255));
-
 }
 
 void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, std::vector<std::vector<float>> &depths) {
@@ -313,6 +311,13 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 
 	for (int i = 0; i < triangles.size(); i++) {
 		CanvasTriangle triangle;
+		bool isTexture = false;
+		TextureMap texture;
+
+		if (triangles[i].colour.name != "") {
+			texture = TextureMap(triangles[i].colour.name);
+			isTexture = true;
+		}
 		for (int j = 0; j < 3; j++) {
 			glm::vec3 cameraToVertex = glm::vec3(triangles[i].vertices[j].x - camera.x, triangles[i].vertices[j].y - camera.y, triangles[i].vertices[j].z - camera.z);
 
@@ -322,15 +327,28 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 			int v = (distance * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
 
 			triangle.vertices[j] = CanvasPoint(u, v, adjustedVector.z);
+
+			if (isTexture == true) {
+				triangle.vertices[j].texturePoint = triangles[i].texturePoints[j];
+				triangle.vertices[j].texturePoint.x *= texture.width;
+				triangle.vertices[j].texturePoint.y *= texture.height;
+
+			}	
 		}
 
-		fillCornell(window, triangle, triangles[i].colour, depths);
+		//std::cout << triangles[i].colour.name << std::endl;
+
+		if (isTexture == true) {
+			textureFill(window, triangle, texture);
+		} else fillCornell(window, triangle, triangles[i].colour, depths);
+
+		
 		
  	}
 
 }
 
-void lookAt(DrawingWindow &window) {
+void lookAt() {
 	glm::vec3 forward = glm::normalize(camera - glm::vec3(0,0,0));
 	glm::vec3 right = glm::normalize(glm::cross(glm::vec3(0,1,0), forward));
 	glm::vec3 up = glm::normalize(glm::cross(forward, right));
@@ -338,6 +356,16 @@ void lookAt(DrawingWindow &window) {
 	cameraOrientation[0] = right;
 	cameraOrientation[1] = up;
 	cameraOrientation[2] = forward;
+}
+
+void resetCamera() {
+	camera[0] = 0.0;
+	camera[1] = 0.0;
+	camera[2] = 4.0;
+
+	cameraOrientation[0] = glm::vec3(1.0, 0.0, 0.0);
+	cameraOrientation[1] = glm::vec3(0.0, 1.0, 0.0);
+	cameraOrientation[2] = glm::vec3(0.0, 0.0, 1.0);
 }
 
 std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unordered_map<std::string, Colour> colours) {
@@ -409,8 +437,9 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename) {
 			Colour temp(int(stof(a)*255), int(stof(b)*255), int(stof(c)*255));
 			colours.insert({colour, temp});
 		} else if (tokens[0] == "map_Kd") {
-			TextureMap texture = TextureMap(tokens[1]);
-			// colours[colour] = readPP
+			Colour temp = colours[colour];
+			temp.name = tokens[1];
+			colours[colour] = temp;
 		}
 	}
 
@@ -431,7 +460,6 @@ void draw(DrawingWindow &window) {
 
 void update(DrawingWindow &window) {
 	// Function for performing animation (shifting artifacts or moving the camera)
-	lookAt(window);
 }
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
@@ -451,6 +479,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 				0, sin(theta), cos(theta)
 			);
 			camera = camera * m;
+			lookAt();
 		}
 		else if (event.key.keysym.sym == SDLK_e) {
 			float theta = PI/180;
@@ -460,6 +489,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 				0, sin(theta), cos(theta)
 			);
 			camera = camera * m;
+			lookAt();
 		}
 		else if (event.key.keysym.sym == SDLK_f) {
 			float theta = PI/180;
@@ -469,6 +499,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 				-sin(theta), 0, cos(theta)
 			);
 			camera = camera * m;
+			lookAt();
 		}
 		else if (event.key.keysym.sym == SDLK_g) {
 			float theta = -PI/180;
@@ -478,10 +509,11 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 				-sin(theta), 0, cos(theta)
 			);
 			camera = camera * m;
+			lookAt();
 		}
 		// CAMERA ORIENTATION ROTATION
 		else if (event.key.keysym.sym == SDLK_u) {
-			float theta = 4*PI/180;
+			float theta = PI/180;
 			glm::mat3 m = glm::mat3(
 				glm::vec3(1, 0, 0),
 				glm::vec3(0, cos(theta), -sin(theta)),
@@ -490,7 +522,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 			cameraOrientation = cameraOrientation * m;
 		}
 		else if (event.key.keysym.sym == SDLK_j) {
-			float theta = -4*PI/180;
+			float theta = -PI/180;
 			glm::mat3 m = glm::mat3(
 				glm::vec3(1, 0, 0),
 				glm::vec3(0, cos(theta), -sin(theta)),
@@ -499,7 +531,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 			cameraOrientation = cameraOrientation * m;
 		}
 		else if (event.key.keysym.sym == SDLK_k) {
-			float theta = -4*PI/180;
+			float theta = -PI/180;
 			glm::mat3 m = glm::mat3(
 				glm::vec3(cos(theta), 0, sin(theta)),
 				glm::vec3(0, 1, 0),
@@ -508,7 +540,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 			cameraOrientation = cameraOrientation * m;
 		}
 		else if (event.key.keysym.sym == SDLK_h) {
-			float theta = 4*PI/180;
+			float theta = PI/180;
 			glm::mat3 m = glm::mat3(
 				glm::vec3(cos(theta), 0, sin(theta)),
 				glm::vec3(0, 1, 0),
@@ -517,7 +549,10 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 			cameraOrientation = cameraOrientation * m;
 		}
 		else if (event.key.keysym.sym == SDLK_q) {
-			lookAt(window);
+			lookAt();
+		}
+		else if (event.key.keysym.sym == SDLK_1) {
+			resetCamera();
 		}
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) window.savePPM("output.ppm");
 }
@@ -529,13 +564,13 @@ int main(int argc, char *argv[]) {
 	std::vector<ModelTriangle> triangles;
 	std::unordered_map<std::string, Colour> colours;
 
-	colours = parseMtl("cornell-box.mtl");
-	triangles = parseObj("cornell-box.obj", 0.4, colours);
+	colours = parseMtl("textured-cornell-box.mtl");
+	triangles = parseObj("textured-cornell-box.obj", 0.4, colours);
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
 		if (window.pollForInputEvents(event)) handleEvent(event, window);
-		update(window);
+		//update(window);
 		draw(window);
 		drawCornell(window, triangles);
 
