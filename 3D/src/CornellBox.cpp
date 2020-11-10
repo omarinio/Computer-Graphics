@@ -3,6 +3,7 @@
 #include <Colour.h>
 #include <DrawingWindow.h>
 #include <ModelTriangle.h>
+#include <RayTriangleIntersection.h>
 #include <TextureMap.h>
 #include <Utils.h>
 #include <fstream>
@@ -96,6 +97,41 @@ std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 t
 	}
 
 	return result;
+}
+
+RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection) {
+	RayTriangleIntersection closestIntersection;
+	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
+
+	// possibleSolution returns t,u,v
+	// t = distance along the ray from the camera to the intersection point
+	// u = the proportion along the triangle's first edge that the intersection point occurs
+	// v = the proportion along the triangle's second edge that the intersection point occurs
+	for (int i = 0; i < triangles.size(); i++) {
+		ModelTriangle triangle = triangles[i];
+		glm::vec3 e0 = triangle.vertices[1] - triangle.vertices[0];
+		glm::vec3 e1 = triangle.vertices[2] - triangle.vertices[0];
+		glm::vec3 SPVector = camera - triangle.vertices[0];
+		glm::mat3 DEMatrix(-rayDirection, e0, e1);
+		glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector; 
+		float t = possibleSolution.x, u = possibleSolution.y, v = possibleSolution.z;
+
+		if ((u >= 0.0) && (u <= 1.0) && (v >= 0.0) && (v <= 1.0) && ((u + v) <= 1.0)) {
+			if (closestIntersection.distanceFromCamera > t && t > 0) {
+				std::cout << "FALO" << std::endl; 
+				closestIntersection.distanceFromCamera = t;
+				closestIntersection.intersectedTriangle = triangle;
+				closestIntersection.triangleIndex = i;
+				glm::vec3 intersectionPoint = triangle.vertices[0] + 
+					u*(triangle.vertices[1]-triangle.vertices[0]) + 
+					v*(triangle.vertices[2]-triangle.vertices[0]);
+
+				closestIntersection.intersectionPoint = intersectionPoint;
+			}
+		}
+	}
+	return closestIntersection;
+
 }
 
 void drawLine(DrawingWindow &window, CanvasPoint from, CanvasPoint to, Colour colour) {
@@ -368,15 +404,16 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 			}	
 		}
 
-		//std::cout << triangles[i].colour.name << std::endl;
-
 		if (isTexture == true) {
 			textureFill(window, triangle, texture, depths);
 		} else fillCornell(window, triangle, triangles[i].colour, depths);
-
-		
 		
  	}
+
+	glm::vec3 falo(0, 0, distance);
+	glm::vec3 ray = camera - falo;
+	RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
+	std::cout << triangles[intersect.triangleIndex].colour << std::endl;
 
 }
 
