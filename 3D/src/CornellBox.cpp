@@ -118,7 +118,7 @@ void drawTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour)
 	drawLine(window, triangle[2], triangle[0], colour);
 }
 
-void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap texture) {
+void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap texture, std::vector<std::vector<float>> &depths) {
 	CanvasPoint top = triangle.vertices[0];
 	CanvasPoint mid = triangle.vertices[1];
 	CanvasPoint bot = triangle.vertices[2];
@@ -127,28 +127,39 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 		std::swap(bot.y, mid.y);
 		std::swap(bot.x, mid.x);
 		std::swap(bot.texturePoint, mid.texturePoint);
+		std::swap(bot.depth, mid.depth);
 	}
 
 	if (mid.y < top.y) {
 		std::swap(mid.y, top.y);
 		std::swap(mid.x, top.x);
 		std::swap(mid.texturePoint, top.texturePoint);
+		std::swap(mid.depth, top.depth);
 	}
 
 	if (bot.y < mid.y) {
 		std::swap(bot.y, mid.y);
 		std::swap(bot.x, mid.x);
 		std::swap(bot.texturePoint, mid.texturePoint);
+		std::swap(bot.depth, mid.depth);
 	}
 	CanvasPoint split;
 	split.y = mid.y;
 
 	split.x = round(top.x + ((mid.y - top.y)/(bot.y-top.y)) * (bot.x-top.x));
 
+	split.depth = top.depth + ((mid.y - top.y)/(bot.y-top.y)) * (bot.depth-top.depth);
+
 	float scale = (mid.y - top.y)/(bot.y-top.y);
 
 	split.texturePoint.x = top.texturePoint.x + scale * (bot.texturePoint.x - top.texturePoint.x);
 	split.texturePoint.y = top.texturePoint.y + scale * (bot.texturePoint.y - top.texturePoint.y);
+
+	// converting depths to inverse for later interpolation
+	top.depth = -1/top.depth;
+	mid.depth = -1/mid.depth;
+	bot.depth = -1/bot.depth;
+	split.depth = -1/split.depth;
 
 	// TOP TRIANGLE ---------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -165,12 +176,19 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 
 		std::vector<TexturePoint> texturePoints = interpolatePoints(leftTexture[i], rightTexture[i], steps+2);
 
-		for (int c = 0; c < texturePoints.size(); c++) {
-			int x_coord = texturePoints.at(c).x;
-			int y_coord = texturePoints.at(c).y;
-			uint32_t col = texture.pixels.at((y_coord*texture.width) + x_coord);
+		for (int c = 0; c < points.size(); c++) {
+			int newX = round(points[c].x);
+			int newY = round(points[c].y);
+			if (newX >= 0 && newX < window.width && newY >= 0 && newY < window.height) {
+				if (points[c].depth > depths[newX][newY]) {
+					depths[newX][newY] = points[c].depth;
+					int x_coord = texturePoints.at(c).x;
+					int y_coord = texturePoints.at(c).y;
+					uint32_t col = texture.pixels.at(int((y_coord*texture.width) + x_coord));
 
-			window.setPixelColour(round(points[c].x), round(points[i].y), col);
+					window.setPixelColour(newX, newY, col);	
+				}			
+			}
 		}
 
 	}
@@ -190,12 +208,20 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 
 		std::vector<TexturePoint> texturePoints = interpolatePoints(leftTexture2[i], rightTexture2[i], steps+2);
 
-		for (int c = 0; c < texturePoints.size(); c++) {
-			int x_coord = texturePoints.at(c).x;
-			int y_coord = texturePoints.at(c).y;
-			uint32_t col = texture.pixels.at(int((y_coord*texture.width) + x_coord));
+		for (int c = 0; c < points.size(); c++) {
+			int newX = round(points[c].x);
+			int newY = round(points[c].y);
+			if (newX >= 0 && newX < window.width && newY >= 0 && newY < window.height) {
+				if (points[c].depth > depths[newX][newY]) {
+					depths[newX][newY] = points[c].depth;
+					int x_coord = texturePoints.at(c).x;
+					int y_coord = texturePoints.at(c).y;
+					uint32_t col = texture.pixels.at(int((y_coord*texture.width) + x_coord));
 
-			window.setPixelColour(round(points[c].x), round(points[i].y), col);
+					window.setPixelColour(newX, newY, col);	
+				}			
+			}
+
 		}
 
 	}
@@ -231,6 +257,12 @@ void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, 
 
 	split.depth = top.depth + ((mid.y - top.y)/(bot.y-top.y)) * (bot.depth-top.depth);
 
+	// converting depths to inverse for later interpolation
+	top.depth = -1/top.depth;
+	mid.depth = -1/mid.depth;
+	bot.depth = -1/bot.depth;
+	split.depth = -1/split.depth;
+
 	// TOP TRIANGLE ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 	std::vector<CanvasPoint> left = interpolatePoints(top, mid, mid.y-top.y+2);
@@ -246,9 +278,9 @@ void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, 
 			int newX = round(points[c].x);
 			int newY = round(points[c].y);
 			if (newX >= 0 && newX < window.width && newY >= 0 && newY < window.height){
-				if (-1/points[c].depth > depths[newX][newY]) {
+				if (points[c].depth > depths[newX][newY]) {
 
-					depths[newX][newY] = -1/points[c].depth;
+					depths[newX][newY] = points[c].depth;
 					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
 					window.setPixelColour(newX, newY, set);
 				}
@@ -274,9 +306,9 @@ void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, 
 			int newX = round(points[c].x);
 			int newY = round(points[c].y);
 			if (newX >= 0 && newX < window.width && newY >= 0 && newY < window.height){
-				if (-1/points[c].depth > depths[newX][newY]) {
+				if (points[c].depth > depths[newX][newY]) {
 
-					depths[newX][newY] = -1/points[c].depth;
+					depths[newX][newY] = points[c].depth;
 					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
 					window.setPixelColour(newX, newY, set);
 				}
@@ -339,7 +371,7 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 		//std::cout << triangles[i].colour.name << std::endl;
 
 		if (isTexture == true) {
-			textureFill(window, triangle, texture);
+			textureFill(window, triangle, texture, depths);
 		} else fillCornell(window, triangle, triangles[i].colour, depths);
 
 		
