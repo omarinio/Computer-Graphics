@@ -118,7 +118,6 @@ RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triang
 
 		if ((u >= 0.0) && (u <= 1.0) && (v >= 0.0) && (v <= 1.0) && ((u + v) <= 1.0)) {
 			if (closestIntersection.distanceFromCamera > t && t > 0) {
-				std::cout << "FALO" << std::endl; 
 				closestIntersection.distanceFromCamera = t;
 				closestIntersection.intersectedTriangle = triangle;
 				closestIntersection.triangleIndex = i;
@@ -410,11 +409,24 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 		
  	}
 
-	glm::vec3 falo(0, 0, distance);
-	glm::vec3 ray = camera - falo;
-	RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
-	std::cout << triangles[intersect.triangleIndex].colour << std::endl;
+}
 
+void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
+	for (int y = 0; y < window.height; y++) {
+		for (int x = 0; x < window.width; x++) {
+			glm::vec3 falo((WIDTH/2) - x, y - (HEIGHT/2), distance);
+			glm::vec3 ray = camera - falo;
+			
+			//ray = ray * cameraOrientation;
+			RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
+			// std::cout << triangles[intersect.triangleIndex].colour << std::endl;
+			if (!std::isinf(intersect.distanceFromCamera)) {
+				Colour colour = triangles[intersect.triangleIndex].colour;
+				uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+				window.setPixelColour(x, y, set);
+			} 
+		}
+	}
 }
 
 void lookAt() {
@@ -636,12 +648,24 @@ int main(int argc, char *argv[]) {
 	colours = parseMtl("textured-cornell-box.mtl");
 	triangles = parseObj("textured-cornell-box.obj", 0.4, colours);
 
+	// glm::vec3 falo(0, -100, distance);
+	// glm::vec3 ray = camera - falo;
+	
+	// RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
+	// std::cout << triangles[intersect.triangleIndex].colour << std::endl;
+	// Colour colour = triangles[intersect.triangleIndex].colour;
+	// uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+	// window.setPixelColour(0, 0, set);
+	
+	//raytraceCornell(window, triangles);
+
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
 		if (window.pollForInputEvents(event)) handleEvent(event, window);
 		//update(window);
 		draw(window);
-		drawCornell(window, triangles);
+		// drawCornell(window, triangles);
+		raytraceCornell(window, triangles);
 
 		// Need to render the frame at the end, or nothing actually gets shown on the screen !
 		window.renderFrame();
