@@ -29,6 +29,11 @@ glm::mat3 cameraOrientation(
 	glm::vec3(0.0, 0.0, 1.0)
 );
 int drawing = 1;
+glm::vec3 light(0.0,0.85,0.0);
+//glm::vec3 light(-0.64901096, 2.739334, 0.532032);
+//glm::vec3 light(-0.64901096, 2.7384973, -0.51796794);
+//glm::vec3 light(0.650989, 2.7384973, -0.51796794);
+//glm::vec3 light(0.650989, 2.739334, 0.532032);
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
 	std::vector<float> result;
@@ -101,6 +106,32 @@ std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 t
 	}
 
 	return result;
+}
+
+bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint, size_t index) {
+	bool shadow = false;
+	glm::vec3 shadowRay = light - intersectionPoint;
+	float length = glm::length(shadowRay);
+
+	for (int i = 0; i < triangles.size(); i++) {
+		if (i != index) {
+			ModelTriangle triangle = triangles[i];
+			glm::vec3 e0 = triangle.vertices[1] - triangle.vertices[0];
+			glm::vec3 e1 = triangle.vertices[2] - triangle.vertices[0];
+			glm::vec3 SPVector = intersectionPoint - triangle.vertices[0];
+			glm::mat3 DEMatrix(-normalize(shadowRay), e0, e1);
+			glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector; 
+			float t = possibleSolution.x, u = possibleSolution.y, v = possibleSolution.z;
+
+			if ((u >= 0.0) && (u <= 1.0) && (v >= 0.0) && (v <= 1.0) && ((u + v) <= 1.0) && t > 0.01f && t < length) {
+				shadow = true;
+				break;
+			}
+		}
+
+	}
+
+	return shadow;
 }
 
 RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection) {
@@ -363,7 +394,7 @@ void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, 
 
 }
 
-void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
+void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 	for (int i = 0; i < triangles.size(); i++) {
 		CanvasTriangle triangle;
 		for (int j = 0; j < 3; j++) {
@@ -380,11 +411,26 @@ void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> tria
 		drawTriangle(window, triangle, Colour(255,255,255));
  	}
 
+	glm::vec3 cameraToVertex = glm::vec3(light.x - camera.x, light.y - camera.y, light.z - camera.z);
+
+	glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
+
+	int u = -(distance * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
+	int v = (distance * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
+
+	// prints red pixels to show light location
+	window.setPixelColour(u, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+	window.setPixelColour(u+1, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+	window.setPixelColour(u, v+1, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+	window.setPixelColour(u-1, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+	window.setPixelColour(u, v-1, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+
+
 }
 
 
 
-void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
+void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 	std::vector<std::vector<float>> depths(window.width, std::vector<float> (window.height, -std::numeric_limits<float>::infinity()));
 
 	for (int i = 0; i < triangles.size(); i++) {
@@ -422,18 +468,23 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
 
 }
 
-void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles) {
+void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 	for (int y = 0; y < window.height; y++) {
 		for (int x = 0; x < window.width; x++) {
 			glm::vec3 falo((WIDTH/2) - x, y - (HEIGHT/2), distance);
 			glm::vec3 ray = camera - falo;
 			ray = normalize(cameraOrientation * ray);
 			RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
-			// std::cout << triangles[intersect.triangleIndex].colour << std::endl;
 			if (!std::isinf(intersect.distanceFromCamera)) {
-				Colour colour = triangles[intersect.triangleIndex].colour;
-				uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
-				window.setPixelColour(x, y, set);
+				if (inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex)) {
+					uint32_t set = (255 << 24) + (0 << 16) + (0 << 8) + 0;
+					window.setPixelColour(x, y, set);
+				} else {
+					Colour colour = triangles[intersect.triangleIndex].colour;
+					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+					window.setPixelColour(x, y, set);
+				}
+
 			} 
 		}
 	}
@@ -665,8 +716,8 @@ int main(int argc, char *argv[]) {
 	std::vector<ModelTriangle> triangles;
 	std::unordered_map<std::string, Colour> colours;
 
-	colours = parseMtl("textured-cornell-box.mtl");
-	triangles = parseObj("textured-cornell-box.obj", 0.4, colours);
+	colours = parseMtl("cornell-box.mtl");
+	triangles = parseObj("cornell-box.obj", 0.4, colours);
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
