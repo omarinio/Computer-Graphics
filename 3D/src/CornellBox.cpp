@@ -15,6 +15,9 @@
 
 #define WIDTH 600
 #define HEIGHT 600
+#define WIREFRAME 1
+#define RASTERISE 2
+#define RAYTRACE 3
 
 #define PI 3.14159265359
 
@@ -25,6 +28,7 @@ glm::mat3 cameraOrientation(
 	glm::vec3(0.0, 1.0, 0.0),
 	glm::vec3(0.0, 0.0, 1.0)
 );
+int drawing = 1;
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
 	std::vector<float> result;
@@ -143,7 +147,10 @@ void drawLine(DrawingWindow &window, CanvasPoint from, CanvasPoint to, Colour co
 		float x = from.x + (xStepSize*i);
 		float y = from.y + (yStepSize*i);
 		uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
-		window.setPixelColour(round(x), round(y), set);
+		if (round(x) >= 0 && round(x) < window.width && round(y) >= 0 && round(y) < window.height) {
+			window.setPixelColour(round(x), round(y), set);
+		}
+
 	}
 }
 
@@ -360,8 +367,12 @@ void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> tria
 	for (int i = 0; i < triangles.size(); i++) {
 		CanvasTriangle triangle;
 		for (int j = 0; j < 3; j++) {
-			int u = -(distance * triangles[i].vertices[j].x/(triangles[i].vertices[j].z - camera.z)) + (window.width / 2);
-			int v = (distance * triangles[i].vertices[j].y/(triangles[i].vertices[j].z - camera.z)) + (window.height / 2);
+			glm::vec3 cameraToVertex = glm::vec3(triangles[i].vertices[j].x - camera.x, triangles[i].vertices[j].y - camera.y, triangles[i].vertices[j].z - camera.z);
+
+			glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
+
+			int u = -(distance * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
+			int v = (distance * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
 
 			triangle.vertices[j] = CanvasPoint(u, v);
 		}
@@ -416,8 +427,7 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> triangles
 		for (int x = 0; x < window.width; x++) {
 			glm::vec3 falo((WIDTH/2) - x, y - (HEIGHT/2), distance);
 			glm::vec3 ray = camera - falo;
-			
-			//ray = ray * cameraOrientation;
+			ray = normalize(cameraOrientation * ray);
 			RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
 			// std::cout << triangles[intersect.triangleIndex].colour << std::endl;
 			if (!std::isinf(intersect.distanceFromCamera)) {
@@ -537,6 +547,7 @@ void draw(DrawingWindow &window) {
 			uint32_t colour = (255 << 24) + (int(red) << 16) + (int(green) << 8) + int(blue);
 		}
 	}
+
 }
 
 void update(DrawingWindow &window) {
@@ -632,8 +643,17 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_q) {
 			lookAt();
 		}
-		else if (event.key.keysym.sym == SDLK_1) {
+		else if (event.key.keysym.sym == SDLK_0) {
 			resetCamera();
+		} 
+		else if (event.key.keysym.sym == SDLK_1) {
+			drawing = WIREFRAME;
+		}
+		else if (event.key.keysym.sym == SDLK_2) {
+			drawing = RASTERISE;
+		}
+		else if (event.key.keysym.sym == SDLK_3) {
+			drawing = RAYTRACE;
 		}
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) window.savePPM("output.ppm");
 }
@@ -648,24 +668,19 @@ int main(int argc, char *argv[]) {
 	colours = parseMtl("textured-cornell-box.mtl");
 	triangles = parseObj("textured-cornell-box.obj", 0.4, colours);
 
-	// glm::vec3 falo(0, -100, distance);
-	// glm::vec3 ray = camera - falo;
-	
-	// RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
-	// std::cout << triangles[intersect.triangleIndex].colour << std::endl;
-	// Colour colour = triangles[intersect.triangleIndex].colour;
-	// uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
-	// window.setPixelColour(0, 0, set);
-	
-	//raytraceCornell(window, triangles);
-
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
 		if (window.pollForInputEvents(event)) handleEvent(event, window);
 		//update(window);
 		draw(window);
-		// drawCornell(window, triangles);
-		raytraceCornell(window, triangles);
+		
+		if (drawing == WIREFRAME) {
+			drawCornellWireframe(window, triangles);
+		} else if (drawing == RASTERISE) {
+			drawCornell(window, triangles);
+		} else {
+			raytraceCornell(window, triangles);
+		}
 
 		// Need to render the frame at the end, or nothing actually gets shown on the screen !
 		window.renderFrame();
