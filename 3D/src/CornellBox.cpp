@@ -134,15 +134,21 @@ bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint,
 	return shadow;
 }
 
-float getBrightness(glm::vec3 intersectionPoint) {
-	glm::vec3 lightRay = light - intersectionPoint;
+float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal) {
+	// glm::vec3 lightRay = light - intersectionPoint;
+	glm::vec3 lightRay = intersectionPoint - light;
 	float length = glm::length(lightRay);
-	//std::cout << length << std::endl;
 	float brightness = 1/(length*length);
 
-	if (brightness < 0) {
-		brightness = 0;
-	} else if (brightness > 1) {
+	float angleOfIncidence = glm::dot(lightRay, normal);
+
+	//std::cout << angleOfIncidence << std::endl;
+
+	if (angleOfIncidence > 0) {
+		brightness += angleOfIncidence;
+	} 
+
+	if (brightness > 1) {
 		brightness = 1;
 	}
 
@@ -492,11 +498,15 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 			RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
 			if (!std::isinf(intersect.distanceFromCamera)) {
 				if (inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex)) {
-					uint32_t set = (255 << 24) + (0 << 16) + (0 << 8) + 0;
+					float brightness = 0.11;
+					Colour colour = triangles[intersect.triangleIndex].colour;
+					colour.red *= brightness;
+					colour.blue *= brightness;
+					colour.green *= brightness;
+					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
 					window.setPixelColour(x, y, set);
 				} else {
-					float brightness = getBrightness(intersect.intersectionPoint);
-					//std::cout << brightness << std::endl;
+					float brightness = getBrightness(intersect.intersectionPoint, triangles[intersect.triangleIndex].normal);
 					Colour colour = triangles[intersect.triangleIndex].colour;
 					colour.red *= brightness;
 					colour.blue *= brightness;
@@ -556,6 +566,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 
 			if (a[1] == "") {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
+				triangle.normal = glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0]));
 				output.push_back(triangle);
 			} else {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
@@ -633,6 +644,8 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 0.1;
 		else if (event.key.keysym.sym == SDLK_s) camera.z += 0.1;
 		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
+		else if (event.key.keysym.sym == SDLK_b) light.y -= 0.1;
+		else if (event.key.keysym.sym == SDLK_g) light.y += 0.1;
 		// CAMERA ROTATION
 		else if (event.key.keysym.sym == SDLK_r) {
 			float theta = -PI/180;
