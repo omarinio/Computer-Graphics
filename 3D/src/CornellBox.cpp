@@ -134,6 +134,21 @@ bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint,
 	return shadow;
 }
 
+float getBrightness(glm::vec3 intersectionPoint) {
+	glm::vec3 lightRay = light - intersectionPoint;
+	float length = glm::length(lightRay);
+	//std::cout << length << std::endl;
+	float brightness = 1/(length*length);
+
+	if (brightness < 0) {
+		brightness = 0;
+	} else if (brightness > 1) {
+		brightness = 1;
+	}
+
+	return brightness;
+}
+
 RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection) {
 	RayTriangleIntersection closestIntersection;
 	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
@@ -480,7 +495,12 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 					uint32_t set = (255 << 24) + (0 << 16) + (0 << 8) + 0;
 					window.setPixelColour(x, y, set);
 				} else {
+					float brightness = getBrightness(intersect.intersectionPoint);
+					//std::cout << brightness << std::endl;
 					Colour colour = triangles[intersect.triangleIndex].colour;
+					colour.red *= brightness;
+					colour.blue *= brightness;
+					colour.green *= brightness;
 					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
 					window.setPixelColour(x, y, set);
 				}
