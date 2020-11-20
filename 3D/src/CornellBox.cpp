@@ -558,6 +558,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 	std::vector<glm::vec3> vertices;
 	std::vector<TexturePoint> textureVertices;
 	std::string colour;
+	std::vector<glm::vec3> normalVecs;
 
 	std::ifstream File(filename);
 	std::string line;
@@ -580,6 +581,12 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			if (a[1] == "") {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
 				triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
+				if (!normalVecs.empty()) {
+					triangle.normals[0] = normalVecs[stoi(a[0])-1];
+					triangle.normals[1] = normalVecs[stoi(b[0])-1];
+					triangle.normals[2] = normalVecs[stoi(c[0])-1];
+				}
+				std::cout << a[0] << std::endl;
 				output.push_back(triangle);
 			} else {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
@@ -593,6 +600,9 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 		} else if (tokens[0] == "vt") {
 			TexturePoint temp = TexturePoint(stof(tokens[1]), stof(tokens[2]));
 			textureVertices.push_back(temp);
+		} else if (tokens[0] == "vn") {
+			glm::vec3 temp = glm::vec3(stof(tokens[1]), stof(tokens[2]), stof(tokens[3])); 
+			normalVecs.push_back(temp);
 		}
 	}
 
@@ -777,7 +787,9 @@ int main(int argc, char *argv[]) {
 	std::unordered_map<std::string, Colour> colours;
 
 	colours = parseMtl("cornell-box.mtl");
-	triangles = parseObj("cornell-box.obj", 0.4, colours);
+	//triangles = parseObj("cornell-box.obj", 0.4, colours);
+
+	triangles = parseObj("sphere.obj", 0.4, colours);
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
