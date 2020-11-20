@@ -30,6 +30,7 @@ glm::mat3 cameraOrientation(
 );
 int drawing = 1;
 glm::vec3 light(0.0,0.85,0.0);
+float lightStrength = 30;
 //glm::vec3 light(-0.64901096, 2.739334, 0.532032);
 //glm::vec3 light(-0.64901096, 2.7384973, -0.51796794);
 //glm::vec3 light(0.650989, 2.7384973, -0.51796794);
@@ -136,16 +137,16 @@ bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint,
 
 float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal) {
 	// glm::vec3 lightRay = light - intersectionPoint;
-	glm::vec3 lightRay = intersectionPoint - light;
+	glm::vec3 lightRay = light - intersectionPoint;
 	float length = glm::length(lightRay);
-	float brightness = 1/(length*length);
 
-	float angleOfIncidence = glm::dot(lightRay, normal);
+	float angleOfIncidence = glm::dot(glm::normalize(lightRay), normal);
+	float brightness = lightStrength/(4 * PI * length*length);
 
 	//std::cout << angleOfIncidence << std::endl;
 
 	if (angleOfIncidence > 0) {
-		brightness += angleOfIncidence;
+		brightness *= angleOfIncidence;
 	} 
 
 	if (brightness > 1) {
@@ -566,7 +567,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 
 			if (a[1] == "") {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
-				triangle.normal = glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0]));
+				triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
 				output.push_back(triangle);
 			} else {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
@@ -646,6 +647,10 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
 		else if (event.key.keysym.sym == SDLK_b) light.y -= 0.1;
 		else if (event.key.keysym.sym == SDLK_g) light.y += 0.1;
+		else if (event.key.keysym.sym == SDLK_z) light.x -= 0.1;
+		else if (event.key.keysym.sym == SDLK_x) light.x += 0.1; 
+		else if (event.key.keysym.sym == SDLK_c) light.z -= 0.1;
+		else if (event.key.keysym.sym == SDLK_v) light.z += 0.1;
 		// CAMERA ROTATION
 		else if (event.key.keysym.sym == SDLK_r) {
 			float theta = -PI/180;
