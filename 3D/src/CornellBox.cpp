@@ -31,6 +31,9 @@ glm::mat3 cameraOrientation(
 int drawing = 1;
 glm::vec3 light(0.0,0.85,0.0);
 float lightStrength = 30;
+bool proximity = true;
+bool incidence = true;
+bool specular = true;
 //glm::vec3 light(-0.64901096, 2.739334, 0.532032);
 //glm::vec3 light(-0.64901096, 2.7384973, -0.51796794);
 //glm::vec3 light(0.650989, 2.7384973, -0.51796794);
@@ -136,21 +139,30 @@ bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint,
 }
 
 float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal) {
-	// glm::vec3 lightRay = light - intersectionPoint;
 	glm::vec3 lightRay = light - intersectionPoint;
+	glm::vec3 cameraRay = (camera * cameraOrientation) - intersectionPoint;
 	float length = glm::length(lightRay);
 
 	float angleOfIncidence = glm::dot(glm::normalize(lightRay), normal);
 	float brightness = lightStrength/(4 * PI * length*length);
 
-	//std::cout << angleOfIncidence << std::endl;
+	glm::vec3 angleOfReflection = glm::normalize(lightRay) - ((2.0f*normal)*glm::dot(glm::normalize(lightRay), normal));
 
-	if (angleOfIncidence > 0) {
+	float specular = std::pow(glm::dot(glm::normalize(angleOfReflection), glm::normalize(cameraRay)), 128);
+
+	if (angleOfIncidence > 0 && incidence) {
 		brightness *= angleOfIncidence;
 	} 
 
+	if (specular) {
+		brightness += specular;
+	}
+
 	if (brightness > 1) {
 		brightness = 1;
+	} 
+	if (brightness < 0.2) {
+		brightness = 0.2;
 	}
 
 	return brightness;
@@ -744,6 +756,16 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_3) {
 			drawing = RAYTRACE;
 		}
+		else if (event.key.keysym.sym == SDLK_4) {
+			proximity = !proximity;
+		}
+		else if (event.key.keysym.sym == SDLK_5) {
+			incidence = !incidence;
+		}
+		else if (event.key.keysym.sym == SDLK_6) {
+			specular = !specular;
+		}
+
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) window.savePPM("output.ppm");
 }
 
