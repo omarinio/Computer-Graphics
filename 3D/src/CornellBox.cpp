@@ -168,6 +168,46 @@ float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal) {
 	return brightness;
 }
 
+float gouraurd(RayTriangleIntersection intersection) {
+	glm::vec3 lightRay = light - intersection.intersectionPoint;
+	glm::vec3 cameraRay = (camera * cameraOrientation) - intersection.intersectionPoint;
+	ModelTriangle triangle = intersection.intersectedTriangle;
+	float length = glm::length(lightRay);
+	std::vector<float> brightnesses;
+
+	for(int i = 0; i < 3; i++) {
+		float temp = glm::dot(triangle.normals[i], glm::normalize(lightRay));
+		brightnesses.push_back(temp);
+	}
+	float brightness = (1 - intersection.u - intersection.v) * brightnesses[0] + intersection.u * brightnesses[1] + intersection.v * brightnesses[2];
+
+	//float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
+	// if (angleOfIncidence > 0 && incidence) {
+	// 	brightness *= falo;
+	// }
+
+	std::vector<glm::vec3> reflections;
+	for(int i = 0; i < 3; i++) {
+		glm::vec3 temp = glm::normalize(lightRay) - ((2.0f*triangle.normals[i])*glm::dot(glm::normalize(lightRay), triangle.normals[i]));
+		reflections.push_back(temp);
+	}
+	glm::vec3 angleOfReflection = (1 - intersection.u - intersection.v) * reflections[0] + intersection.u * reflections[1] + intersection.v * reflections[2];
+
+	float specular = std::pow(glm::dot(glm::normalize(angleOfReflection), glm::normalize(cameraRay)), 128);
+
+	if (specular) {
+		brightness += specular;
+	} 
+	if (brightness > 1) {
+		brightness = 1;
+	} 
+	if (brightness < 0.11) {
+		brightness = 0.11;
+	}
+
+	return brightness;
+}
+
 RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection) {
 	RayTriangleIntersection closestIntersection;
 	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
@@ -195,6 +235,8 @@ RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triang
 					v*(triangle.vertices[2]-triangle.vertices[0]);
 
 				closestIntersection.intersectionPoint = intersectionPoint;
+				closestIntersection.u = u;
+				closestIntersection.v = v;
 			}
 		}
 	}
@@ -519,7 +561,8 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
 					window.setPixelColour(x, y, set);
 				} else {
-					float brightness = getBrightness(intersect.intersectionPoint, triangles[intersect.triangleIndex].normal);
+					//float brightness = getBrightness(intersect.intersectionPoint, triangles[intersect.triangleIndex].normal);
+					float brightness = gouraurd(intersect);
 					Colour colour = triangles[intersect.triangleIndex].colour;
 					colour.red *= brightness;
 					colour.blue *= brightness;
@@ -586,7 +629,6 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 					triangle.normals[1] = normalVecs[stoi(b[0])-1];
 					triangle.normals[2] = normalVecs[stoi(c[0])-1];
 				}
-				std::cout << a[0] << std::endl;
 				output.push_back(triangle);
 			} else {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
@@ -668,7 +710,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_s) camera.z += 0.1;
 		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
 		else if (event.key.keysym.sym == SDLK_b) light.y -= 0.1;
-		else if (event.key.keysym.sym == SDLK_g) light.y += 0.1;
+		else if (event.key.keysym.sym == SDLK_n) light.y += 0.1;
 		else if (event.key.keysym.sym == SDLK_z) light.x -= 0.1;
 		else if (event.key.keysym.sym == SDLK_x) light.x += 0.1; 
 		else if (event.key.keysym.sym == SDLK_c) light.z -= 0.1;
