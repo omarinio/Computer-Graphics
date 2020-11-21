@@ -127,7 +127,7 @@ bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint,
 			glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector; 
 			float t = possibleSolution.x, u = possibleSolution.y, v = possibleSolution.z;
 
-			if ((u >= 0.0) && (u <= 1.0) && (v >= 0.0) && (v <= 1.0) && ((u + v) <= 1.0) && t > 0.01f && t < length) {
+			if ((u >= 0.0) && (u <= 1.0) && (v >= 0.0) && (v <= 1.0) && ((u + v) <= 1.0) && t > 0.05f && t < length) {
 				shadow = true;
 				break;
 			}
