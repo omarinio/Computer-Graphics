@@ -30,7 +30,7 @@ glm::mat3 cameraOrientation(
 );
 int drawing = 1;
 glm::vec3 light(0.0,0.85,0.0);
-float lightStrength = 30;
+float lightStrength = 15;
 bool proximity = true;
 bool incidence = true;
 bool specular = true;
@@ -127,7 +127,7 @@ bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint,
 			glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector; 
 			float t = possibleSolution.x, u = possibleSolution.y, v = possibleSolution.z;
 
-			if ((u >= 0.0) && (u <= 1.0) && (v >= 0.0) && (v <= 1.0) && ((u + v) <= 1.0) && t > 0.05f && t < length) {
+			if ((u >= 0.0f) && (u <= 1.0f) && (v >= 0.0f) && (v <= 1.0f) && ((u + v) <= 1.0f) && t > 0.05f && t < length) {
 				shadow = true;
 				break;
 			}
@@ -161,8 +161,8 @@ float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal) {
 	if (brightness > 1) {
 		brightness = 1;
 	} 
-	if (brightness < 0.2) {
-		brightness = 0.2;
+	if (brightness < 0.11) {
+		brightness = 0.11;
 	}
 
 	return brightness;
@@ -179,12 +179,12 @@ float gouraurd(RayTriangleIntersection intersection) {
 		float temp = glm::dot(triangle.normals[i], glm::normalize(lightRay));
 		brightnesses.push_back(temp);
 	}
-	float brightness = (1 - intersection.u - intersection.v) * brightnesses[0] + intersection.u * brightnesses[1] + intersection.v * brightnesses[2];
+	float angleOfIncidence = (1 - intersection.u - intersection.v) * brightnesses[0] + intersection.u * brightnesses[1] + intersection.v * brightnesses[2];
 
-	//float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
-	// if (angleOfIncidence > 0 && incidence) {
-	// 	brightness *= falo;
-	// }
+	float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
+	if (angleOfIncidence > 0 && incidence) {
+		brightness *= angleOfIncidence;
+	}
 
 	std::vector<glm::vec3> reflections;
 	for(int i = 0; i < 3; i++) {
@@ -205,6 +205,39 @@ float gouraurd(RayTriangleIntersection intersection) {
 		brightness = 0.11;
 	}
 
+	return brightness;
+}
+
+float phong(RayTriangleIntersection intersection) {
+	glm::vec3 lightRay = light - intersection.intersectionPoint;
+	ModelTriangle triangle = intersection.intersectedTriangle;
+	glm::vec3 cameraRay = (camera * cameraOrientation) - intersection.intersectionPoint;
+	float length = glm::length(lightRay);
+	
+	// glm::vec3 interpolatedNormal = (1 - intersection.u - intersection.v) * triangle.normals[0] + intersection.u * triangle.normals[1] + intersection.v * triangle.normals[2];
+	glm::vec3 interpolatedNormal = triangle.normals[0] + (intersection.u * (triangle.normals[1] - triangle.normals[0])) + (intersection.v * (triangle.normals[2] - triangle.normals[0]));
+
+	float angleOfIncidence = glm::dot(glm::normalize(lightRay), glm::normalize(interpolatedNormal));
+	float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
+
+	glm::vec3 angleOfReflection = glm::normalize(lightRay) - ((2.0f*interpolatedNormal)*glm::dot(glm::normalize(lightRay), interpolatedNormal));
+
+	float specular = std::pow(glm::dot(glm::normalize(angleOfReflection), glm::normalize(cameraRay)), 256);
+
+	// if (angleOfIncidence > 0 && incidence) {
+	// 	brightness *= angleOfIncidence;
+	// } 
+
+	if (specular) {
+		brightness += specular;
+	}
+
+	if (brightness > 1) {
+		brightness = 1;
+	} 
+	if (brightness < 0.11) {
+		brightness = 0.11;
+	}
 	return brightness;
 }
 
@@ -552,24 +585,35 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 			ray = normalize(cameraOrientation * ray);
 			RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
 			if (!std::isinf(intersect.distanceFromCamera)) {
-				if (inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex)) {
-					float brightness = 0.11;
-					Colour colour = triangles[intersect.triangleIndex].colour;
-					colour.red *= brightness;
-					colour.blue *= brightness;
-					colour.green *= brightness;
-					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
-					window.setPixelColour(x, y, set);
-				} else {
-					//float brightness = getBrightness(intersect.intersectionPoint, triangles[intersect.triangleIndex].normal);
-					float brightness = gouraurd(intersect);
-					Colour colour = triangles[intersect.triangleIndex].colour;
-					colour.red *= brightness;
-					colour.blue *= brightness;
-					colour.green *= brightness;
-					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
-					window.setPixelColour(x, y, set);
-				}
+				// if (inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex)) {
+				// 	float brightness = 0.11;
+				// 	Colour colour = triangles[intersect.triangleIndex].colour;
+				// 	colour.red *= brightness;
+				// 	colour.blue *= brightness;
+				// 	colour.green *= brightness;
+				// 	uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+				// 	window.setPixelColour(x, y, set);
+				// } else {
+				// 	//float brightness = getBrightness(intersect.intersectionPoint, triangles[intersect.triangleIndex].normal);
+				// 	//float brightness = gouraurd(intersect);
+				// 	float brightness = phong(intersect);
+				// 	Colour colour = triangles[intersect.triangleIndex].colour;
+				// 	colour.red *= brightness;
+				// 	colour.blue *= brightness;
+				// 	colour.green *= brightness;
+				// 	uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+				// 	window.setPixelColour(x, y, set);
+				// }
+				float brightness = phong(intersect);
+				//float brightness = getBrightness(intersect.intersectionPoint, triangles[intersect.triangleIndex].normal);
+				bool shadow = inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex);
+				if (shadow) brightness = 0.11;
+				Colour colour = triangles[intersect.triangleIndex].colour;
+				colour.red *= brightness;
+				colour.blue *= brightness;
+				colour.green *= brightness;
+				uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+				window.setPixelColour(x, y, set);
 
 			} 
 		}
@@ -594,6 +638,42 @@ void resetCamera() {
 	cameraOrientation[0] = glm::vec3(1.0, 0.0, 0.0);
 	cameraOrientation[1] = glm::vec3(0.0, 1.0, 0.0);
 	cameraOrientation[2] = glm::vec3(0.0, 0.0, 1.0);
+}
+
+void vertexNormals(std::vector<ModelTriangle> &triangles) {
+    for(int i = 0; i < triangles.size(); i++) {
+        ModelTriangle t = triangles[i];
+        std::vector<glm::vec3> normals;
+        for(int v = 0; v < t.vertices.size(); v++) {
+            std::vector<int> indicies;
+            for(int j = 0; j < triangles.size(); j++) {
+                ModelTriangle t_ = triangles[j];
+                if(t.vertices[v].x == t_.vertices[v].x && t.vertices[v].y == t_.vertices[v].y && t.vertices[v].z == t_.vertices[v].z) {
+                    indicies.push_back(j);
+                }
+            }
+            float x = 0, y = 0, z = 0;
+            for(int j = 0; j < indicies.size(); j++) {
+                ModelTriangle t_ = triangles[indicies[j]];
+                x += t_.normal.x;
+                y += t_.normal.y;
+                z += t_.normal.z;
+            }
+            x /= indicies.size();
+            y /= indicies.size();
+            z /= indicies.size();
+            // cout << x << "," << y << "," << z << endl;
+            bool is_in = false;
+            for(int j = 0; j < normals.size(); j++) {
+                glm::vec3 normal = normals[j];
+                if(normal.x == x && normal.y == y && normal.z == z) {
+                    is_in = true;
+                }
+            }
+            triangles[i].normals[v] = glm::vec3(x,y,z);
+        }
+        // if(!t_indicies.empty() && !is_in) normal_map.push_back(make_pair(t.vertices[v], t_indicies));
+    }
 }
 
 std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unordered_map<std::string, Colour> colours) {
@@ -628,7 +708,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 					triangle.normals[0] = normalVecs[stoi(a[0])-1];
 					triangle.normals[1] = normalVecs[stoi(b[0])-1];
 					triangle.normals[2] = normalVecs[stoi(c[0])-1];
-				}
+				} 
 				output.push_back(triangle);
 			} else {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
@@ -642,9 +722,20 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 		} else if (tokens[0] == "vt") {
 			TexturePoint temp = TexturePoint(stof(tokens[1]), stof(tokens[2]));
 			textureVertices.push_back(temp);
-		} else if (tokens[0] == "vn") {
+		} 
+		else if (tokens[0] == "vn") {
 			glm::vec3 temp = glm::vec3(stof(tokens[1]), stof(tokens[2]), stof(tokens[3])); 
 			normalVecs.push_back(temp);
+		}
+	}
+
+	if (normalVecs.empty()) {
+		vertexNormals(output);
+	}
+
+	for(int i = 0; i < output.size(); i++) {
+		for (int j = 0; j < 3; j++) {
+			std::cout << glm::to_string(output[i].normals[j]) << std::endl;
 		}
 	}
 
@@ -826,6 +917,7 @@ int main(int argc, char *argv[]) {
 	SDL_Event event;
 
 	std::vector<ModelTriangle> triangles;
+	//std::vector<ModelTriangle> triangles2;
 	std::unordered_map<std::string, Colour> colours;
 
 	colours = parseMtl("cornell-box.mtl");
@@ -841,10 +933,12 @@ int main(int argc, char *argv[]) {
 		
 		if (drawing == WIREFRAME) {
 			drawCornellWireframe(window, triangles);
+			//drawCornellWireframe(window, triangles2);
 		} else if (drawing == RASTERISE) {
 			drawCornell(window, triangles);
 		} else {
 			raytraceCornell(window, triangles);
+			//raytraceCornell(window, triangles2);
 		}
 
 		// Need to render the frame at the end, or nothing actually gets shown on the screen !
