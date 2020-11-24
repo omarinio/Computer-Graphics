@@ -30,7 +30,7 @@ glm::mat3 cameraOrientation(
 );
 int drawing = 1;
 glm::vec3 light(0.0,0.85,0.0);
-float lightStrength = 35;
+float lightStrength = 30;
 bool basic = false;
 bool gouraurdDraw = false;
 bool phongDraw = true;
@@ -161,8 +161,8 @@ float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal) {
 	if (brightness > 1) {
 		brightness = 1;
 	} 
-	if (brightness < 0.11) {
-		brightness = 0.11;
+	if (brightness < 0.2) {
+		brightness = 0.2;
 	}
 
 	return brightness;
@@ -201,8 +201,8 @@ float gouraurd(RayTriangleIntersection intersection) {
 	if (brightness > 1) {
 		brightness = 1;
 	} 
-	if (brightness < 0.11) {
-		brightness = 0.11;
+	if (brightness < 0.2) {
+		brightness = 0.2;
 	}
 
 	return brightness;
@@ -213,30 +213,34 @@ float phong(RayTriangleIntersection intersection) {
 	ModelTriangle triangle = intersection.intersectedTriangle;
 	glm::vec3 cameraRay = (camera * cameraOrientation) - intersection.intersectionPoint;
 	float length = glm::length(lightRay);
+	glm::vec3 specLightRay = intersection.intersectionPoint - light;
 	
 	glm::vec3 interpolatedNormal = (1 - intersection.u - intersection.v) * triangle.normals[0] + intersection.u * triangle.normals[1] + intersection.v * triangle.normals[2];
 	//glm::vec3 interpolatedNormal = triangle.normals[0] + (intersection.u * (triangle.normals[1] - triangle.normals[0])) + (intersection.v * (triangle.normals[2] - triangle.normals[0]));
 
 	float angleOfIncidence = glm::dot(glm::normalize(lightRay), glm::normalize(interpolatedNormal));
-	float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
+	//float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
+	float brightness = lightStrength/(4 * PI * length*length);
 
-	glm::vec3 angleOfReflection = glm::normalize(lightRay) - ((2.0f*interpolatedNormal)*glm::dot(glm::normalize(lightRay), interpolatedNormal));
+	glm::vec3 angleOfReflection = glm::normalize(specLightRay) - (2.0f*glm::normalize(interpolatedNormal)*glm::dot(glm::normalize(specLightRay), glm::normalize(interpolatedNormal)));
 
 	float specular = std::pow(glm::dot(glm::normalize(angleOfReflection), glm::normalize(cameraRay)), 128);
 
-	// if (angleOfIncidence > 0) {
-	// 	brightness *= angleOfIncidence;
-	// } 
+	if (angleOfIncidence > 0) {
+		brightness *= angleOfIncidence;
+	} else {
+		brightness *= 0;
+	}
 
-	if (specular) {
-		brightness += specular;
+	if (specular >= 0) {
+		brightness += specular*0.2;
 	}
 
 	if (brightness > 1) {
 		brightness = 1;
 	} 
-	if (brightness < 0.11) {
-		brightness = 0.11;
+	if (brightness < 0.2) {
+		brightness = 0.2;
 	}
 	return brightness;
 }
@@ -594,7 +598,7 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 					brightness = gouraurd(intersect);
 				}
 				bool shadow = inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex);
-				if (shadow) brightness = 0.11;
+				if (shadow) brightness = 0.2;
 				Colour colour = triangles[intersect.triangleIndex].colour;
 				colour.red *= brightness;
 				colour.blue *= brightness;

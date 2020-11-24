@@ -1,7 +1,7 @@
 mtllib cornell-box.mtl
 
 o sphere
-usemtl Grey
+usemtl Yellow
 vn 0.327474 -0.907859 -0.261827
 v 0.270598 0.576120 0.729402
 vn 0.046420 -0.907858 -0.416699
