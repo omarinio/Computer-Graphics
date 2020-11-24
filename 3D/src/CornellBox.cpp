@@ -22,7 +22,7 @@
 #define PI 3.14159265359
 
  //glm::vec3 camera(0.0, 0.0, 4.0);
-glm::vec3 camera(0.0, 0.0, 250.0);
+glm::vec3 camera(150.0, 150.0, 250.0);
 float distance = 700;
 glm::mat3 cameraOrientation(
 	glm::vec3(1.0, 0.0, 0.0),
@@ -30,7 +30,8 @@ glm::mat3 cameraOrientation(
 	glm::vec3(0.0, 0.0, 1.0)
 );
 int drawing = 1;
-glm::vec3 light(0.0,0.85,0.0);
+// glm::vec3 light(0.0,0.85,0.0);
+glm::vec3 light(75.0,75.0,25.0);
 float lightStrength = 30;
 bool basic = false;
 bool gouraurdDraw = false;
@@ -305,30 +306,61 @@ void drawTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour)
 	drawLine(window, triangle[2], triangle[0], colour);
 }
 
+// void testFunc(CanvasTriangle triangle, TextureMap texture, DrawingWindow &window, std::vector<std::vector<float>> &depths) {
+// 	CanvasPoint top = triangle.vertices[0];
+//     CanvasPoint mid = triangle.vertices[1];
+//     CanvasPoint bot = triangle.vertices[2];
+	
+// 	std::vector<CanvasPoint> left = interpolatePoints(top, mid, abs(mid.y-top.y)+2);
+// 	std::vector<CanvasPoint> right = interpolatePoints(top, bot, abs(mid.y-top.y)+2);
+// 	std::vector<TexturePoint> left_texture = interpolatePoints(top.texturePoint, mid.texturePoint, abs(mid.y-top.y)+2);
+// 	std::vector<TexturePoint> right_texture = interpolatePoints(top.texturePoint, bot.texturePoint, abs(mid.y-top.y)+2);
+
+// 	for(int i = 0; i < left.size(); i++) {
+// 		int steps = abs(left[i].x - right[i].x);
+
+// 		std::vector<CanvasPoint> points = interpolatePoints(left[i], right[i], steps+2);
+// 		std::vector<TexturePoint> points_texture = interpolatePoints(left_texture[i], right_texture[i], steps+2);
+// 		for(int j = 0; j < points.size(); j++) {
+// 			int x = round(points[j].x);
+// 			int y = round(points[j].y);
+// 			if(x >= 0 && x < window.width && y >= 0 && y < window.height) {
+// 				if(points[j].depth > depths[x][y]) {
+// 					depths[x][y] = points[j].depth;
+// 					window.setPixelColour(x, y, texture.pixels[round(points_texture[j].y)*texture.width + round(points_texture[j].x)]);
+// 				}
+// 			}
+// 		}
+// 	}
+// }
+
 void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap texture, std::vector<std::vector<float>> &depths) {
 	CanvasPoint top = triangle.vertices[0];
 	CanvasPoint mid = triangle.vertices[1];
 	CanvasPoint bot = triangle.vertices[2];
 
 	if (bot.y < mid.y) {
-		std::swap(bot.y, mid.y);
-		std::swap(bot.x, mid.x);
-		std::swap(bot.texturePoint, mid.texturePoint);
-		std::swap(bot.depth, mid.depth);
+		// std::swap(bot.y, mid.y);
+		// std::swap(bot.x, mid.x);
+		// std::swap(bot.texturePoint, mid.texturePoint);
+		// std::swap(bot.depth, mid.depth);
+		std::swap(bot, mid);
 	}
 
 	if (mid.y < top.y) {
-		std::swap(mid.y, top.y);
-		std::swap(mid.x, top.x);
-		std::swap(mid.texturePoint, top.texturePoint);
-		std::swap(mid.depth, top.depth);
+		// std::swap(mid.y, top.y);
+		// std::swap(mid.x, top.x);
+		// std::swap(mid.texturePoint, top.texturePoint);
+		// std::swap(mid.depth, top.depth);
+		std::swap(mid, top);
 	}
 
 	if (bot.y < mid.y) {
-		std::swap(bot.y, mid.y);
-		std::swap(bot.x, mid.x);
-		std::swap(bot.texturePoint, mid.texturePoint);
-		std::swap(bot.depth, mid.depth);
+		// std::swap(bot.y, mid.y);
+		// std::swap(bot.x, mid.x);
+		// std::swap(bot.texturePoint, mid.texturePoint);
+		// std::swap(bot.depth, mid.depth);
+		std::swap(bot, mid);
 	}
 	CanvasPoint split;
 	split.y = mid.y;
@@ -348,13 +380,19 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 	bot.depth = -1/bot.depth;
 	split.depth = -1/split.depth;
 
-	// TOP TRIANGLE ---------------------------------------------------------------------------------------------------------------------------------------------------
+	// CanvasTriangle t_1 = CanvasTriangle(top,mid,split);
+	// CanvasTriangle t_2 = CanvasTriangle(bot,mid,split);
 
-	std::vector<CanvasPoint> left = interpolatePoints(top, mid, mid.y-top.y+2);
-	std::vector<TexturePoint> leftTexture = interpolatePoints(top.texturePoint, mid.texturePoint, mid.y-top.y+2);
+	// testFunc(t_1, texture, window, depths);
+	// testFunc(t_2, texture, window, depths);
 
-	std::vector<CanvasPoint> right = interpolatePoints(top, split, mid.y-top.y+2);
-	std::vector<TexturePoint> rightTexture = interpolatePoints(top.texturePoint, split.texturePoint, mid.y-top.y+2);
+	// // TOP TRIANGLE ---------------------------------------------------------------------------------------------------------------------------------------------------
+
+	std::vector<CanvasPoint> left = interpolatePoints(top, mid, abs(mid.y-top.y)+2);
+	std::vector<TexturePoint> leftTexture = interpolatePoints(top.texturePoint, mid.texturePoint, abs(mid.y-top.y)+2);
+
+	std::vector<CanvasPoint> right = interpolatePoints(top, split, abs(mid.y-top.y)+2);
+	std::vector<TexturePoint> rightTexture = interpolatePoints(top.texturePoint, split.texturePoint, abs(mid.y-top.y)+2);
 
 	for (int i = 0; i < left.size(); i++) {
 		int steps = abs(left[i].x - right[i].x);
@@ -362,6 +400,7 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 		std::vector<CanvasPoint> points = interpolatePoints(left[i], right[i], steps+2);
 
 		std::vector<TexturePoint> texturePoints = interpolatePoints(leftTexture[i], rightTexture[i], steps+2);
+		//std::cout << points.size() << std::endl;
 
 		for (int c = 0; c < points.size(); c++) {
 			int newX = round(points[c].x);
@@ -369,9 +408,9 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 			if (newX >= 0 && newX < window.width && newY >= 0 && newY < window.height) {
 				if (points[c].depth > depths[newX][newY]) {
 					depths[newX][newY] = points[c].depth;
-					int x_coord = texturePoints.at(c).x;
-					int y_coord = texturePoints.at(c).y;
-					uint32_t col = texture.pixels.at(int((y_coord*texture.width) + x_coord));
+					int x_coord = round(texturePoints.at(c).x);
+					int y_coord = round(texturePoints.at(c).y);
+					uint32_t col = texture.pixels[y_coord*texture.width + x_coord];
 
 					window.setPixelColour(newX, newY, col);	
 				}			
@@ -380,13 +419,13 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 
 	}
 
-	// BOTTOM TRIANGLE ------------------------------------------------------------------------------------------------------------------------------------------------
+	// // BOTTOM TRIANGLE ------------------------------------------------------------------------------------------------------------------------------------------------
 
-	std::vector<CanvasPoint> left2 = interpolatePoints(bot, mid, bot.y-mid.y+2);
-	std::vector<TexturePoint> leftTexture2 = interpolatePoints(bot.texturePoint, mid.texturePoint, bot.y-mid.y+2);
+	std::vector<CanvasPoint> left2 = interpolatePoints(bot, mid, abs(bot.y-mid.y)+2);
+	std::vector<TexturePoint> leftTexture2 = interpolatePoints(bot.texturePoint, mid.texturePoint, abs(bot.y-mid.y)+2);
 
-	std::vector<CanvasPoint> right2 = interpolatePoints(bot, split, bot.y-mid.y+2);
-	std::vector<TexturePoint> rightTexture2 = interpolatePoints(bot.texturePoint, split.texturePoint, bot.y-mid.y+2);
+	std::vector<CanvasPoint> right2 = interpolatePoints(bot, split, abs(bot.y-mid.y)+2);
+	std::vector<TexturePoint> rightTexture2 = interpolatePoints(bot.texturePoint, split.texturePoint, abs(bot.y-mid.y)+2);
 
 	for (int i = 0; i < left2.size(); i++) {
 		int steps = abs(left2[i].x - right2[i].x);
@@ -401,9 +440,9 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 			if (newX >= 0 && newX < window.width && newY >= 0 && newY < window.height) {
 				if (points[c].depth > depths[newX][newY]) {
 					depths[newX][newY] = points[c].depth;
-					int x_coord = texturePoints.at(c).x;
-					int y_coord = texturePoints.at(c).y;
-					uint32_t col = texture.pixels.at(int((y_coord*texture.width) + x_coord));
+					int x_coord = round(texturePoints.at(c).x);
+					int y_coord = round(texturePoints.at(c).y);
+					uint32_t col = texture.pixels[y_coord*texture.width + x_coord];
 
 					window.setPixelColour(newX, newY, col);	
 				}			
@@ -452,9 +491,9 @@ void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, 
 
 	// TOP TRIANGLE ---------------------------------------------------------------------------------------------------------------------------------------------------
 
-	std::vector<CanvasPoint> left = interpolatePoints(top, mid, mid.y-top.y+2);
+	std::vector<CanvasPoint> left = interpolatePoints(top, mid, abs(mid.y-top.y)+2);
 
-	std::vector<CanvasPoint> right = interpolatePoints(top, split, mid.y-top.y+2);
+	std::vector<CanvasPoint> right = interpolatePoints(top, split, abs(mid.y-top.y)+2);
 
 	for (int i = 0; i < left.size(); i++) {
 		int steps = abs(left[i].x - right[i].x);
@@ -480,9 +519,9 @@ void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, 
 
 	// BOTTOM TRIANGLE ------------------------------------------------------------------------------------------------------------------------------------------------
 
-	std::vector<CanvasPoint> left2 = interpolatePoints(bot, mid, bot.y-mid.y+2);
+	std::vector<CanvasPoint> left2 = interpolatePoints(bot, mid, abs(bot.y-mid.y)+2);
 
-	std::vector<CanvasPoint> right2 = interpolatePoints(bot, split, bot.y-mid.y+2);
+	std::vector<CanvasPoint> right2 = interpolatePoints(bot, split, abs(bot.y-mid.y)+2);
 
 	for (int i = 0; i < left2.size(); i++) {
 		int steps = abs(left2[i].x - right2[i].x);
@@ -554,7 +593,7 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 
 		if (triangles[i].colour.name != "") {
 			texture = TextureMap(triangles[i].colour.name);
-			std::cout << triangles[i].colour.name << std::endl;
+			//std::cout << triangles[i].colour.name << std::endl;
 			isTexture = true;
 		}
 		for (int j = 0; j < 3; j++) {
@@ -576,6 +615,7 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 		}
 
 		if (isTexture == true) {
+			//std::cout << "falo" << std::endl;
 			textureFill(window, triangle, texture, depths);
 		} else fillCornell(window, triangle, triangles[i].colour, depths);
 		
@@ -669,7 +709,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 
 	if (filename == "logo.obj") colour = "texture";
 
-	std::cout << colours[colour].name << std::endl;
+	//std::cout << "FALO:" << colours[colour].name << std::endl;
 	
 	while(std::getline(File, line)) {
 		if(line == "") continue;
@@ -707,7 +747,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			}
 		} else if (tokens[0] == "usemtl") {
 			colour = tokens[1];
-			std::cout << colour << std::endl;
+			//std::cout << colour << std::endl;
 		} else if (tokens[0] == "vt") {
 			TexturePoint temp = TexturePoint(stof(tokens[1]), stof(tokens[2]));
 			textureVertices.push_back(temp);
@@ -722,7 +762,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 		vertexNormals(output);
 	}
 
-	std::cout << textureVertices.size() << std::endl;
+	//std::cout << textureVertices.size() << std::endl;
 
 	File.close();
 
@@ -759,7 +799,7 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename) {
 			Colour temp(255, 255, 255);
 			temp.name = tokens[1];
 			colours.insert({"texture", temp});
-			std::cout << colours["texture"] << std::endl;
+			//std::cout << colours["texture"] << std::endl;
 		}
 	}
 
@@ -938,9 +978,10 @@ int main(int argc, char *argv[]) {
 	// triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
 
 	colours = parseMtl("materials.mtl");
-	std::cout << colours["texture"] << std::endl;
 	triangles = parseObj("logo.obj", 0.3, colours);
-	std::cout << triangles.size() << std::endl;
+
+	//colours = parseMtl("logo-test.mtl");
+	//triangles = parseObj("logo-obj.obj", 0.3, colours);
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
