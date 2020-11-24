@@ -21,7 +21,8 @@
 
 #define PI 3.14159265359
 
-glm::vec3 camera(0.0, 0.0, 4.0);
+ //glm::vec3 camera(0.0, 0.0, 4.0);
+glm::vec3 camera(0.0, 0.0, 250.0);
 float distance = 700;
 glm::mat3 cameraOrientation(
 	glm::vec3(1.0, 0.0, 0.0),
@@ -553,6 +554,7 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 
 		if (triangles[i].colour.name != "") {
 			texture = TextureMap(triangles[i].colour.name);
+			std::cout << triangles[i].colour.name << std::endl;
 			isTexture = true;
 		}
 		for (int j = 0; j < 3; j++) {
@@ -664,6 +666,10 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 
 	std::ifstream File(filename);
 	std::string line;
+
+	if (filename == "logo.obj") colour = "texture";
+
+	std::cout << colours[colour].name << std::endl;
 	
 	while(std::getline(File, line)) {
 		if(line == "") continue;
@@ -691,6 +697,9 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 				output.push_back(triangle);
 			} else {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
+				//std::cout << triangle.colour << std::endl;
+				//std::cout << colours[colour].name << std::endl;
+				 //std::cout << colour << std::endl;
 				triangle.texturePoints[0] = textureVertices[stoi(a[1])-1];
 				triangle.texturePoints[1] = textureVertices[stoi(b[1])-1];
 				triangle.texturePoints[2] = textureVertices[stoi(c[1])-1];
@@ -698,6 +707,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			}
 		} else if (tokens[0] == "usemtl") {
 			colour = tokens[1];
+			std::cout << colour << std::endl;
 		} else if (tokens[0] == "vt") {
 			TexturePoint temp = TexturePoint(stof(tokens[1]), stof(tokens[2]));
 			textureVertices.push_back(temp);
@@ -711,6 +721,8 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 	if (normalVecs.empty()) {
 		vertexNormals(output);
 	}
+
+	std::cout << textureVertices.size() << std::endl;
 
 	File.close();
 
@@ -739,11 +751,19 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename) {
 			Colour temp(int(stof(a)*255), int(stof(b)*255), int(stof(c)*255));
 			colours.insert({colour, temp});
 		} else if (tokens[0] == "map_Kd") {
-			Colour temp = colours[colour];
+			// Colour temp = colours[colour];
+			// temp.name = tokens[1];
+			// std::cout << temp.name << std::endl;
+			// colours[colour] = temp;
+			// std::cout << colour << std::endl;
+			Colour temp(255, 255, 255);
 			temp.name = tokens[1];
-			colours[colour] = temp;
+			colours.insert({"texture", temp});
+			std::cout << colours["texture"] << std::endl;
 		}
 	}
+
+	File.close();
 
 	return colours;
 }
@@ -767,18 +787,18 @@ void update(DrawingWindow &window) {
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
 	if (event.type == SDL_KEYDOWN) {
-		if (event.key.keysym.sym == SDLK_LEFT) camera.x += 0.1;
-		else if (event.key.keysym.sym == SDLK_RIGHT) camera.x -= 0.1;
-		else if (event.key.keysym.sym == SDLK_UP) camera.y -= 0.1;
-		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 0.1;
+		if (event.key.keysym.sym == SDLK_LEFT) camera.x += 2;
+		else if (event.key.keysym.sym == SDLK_RIGHT) camera.x -= 2;
+		else if (event.key.keysym.sym == SDLK_UP) camera.y -= 2;
+		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 2;
 		else if (event.key.keysym.sym == SDLK_s) camera.z += 0.1;
 		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
-		else if (event.key.keysym.sym == SDLK_b) light.y -= 0.1;
-		else if (event.key.keysym.sym == SDLK_n) light.y += 0.1;
-		else if (event.key.keysym.sym == SDLK_z) light.x -= 0.1;
-		else if (event.key.keysym.sym == SDLK_x) light.x += 0.1; 
-		else if (event.key.keysym.sym == SDLK_c) light.z -= 0.1;
-		else if (event.key.keysym.sym == SDLK_v) light.z += 0.1;
+		else if (event.key.keysym.sym == SDLK_b) light.y -= 2;
+		else if (event.key.keysym.sym == SDLK_n) light.y += 2;
+		else if (event.key.keysym.sym == SDLK_z) light.x -= 2;
+		else if (event.key.keysym.sym == SDLK_x) light.x += 2; 
+		else if (event.key.keysym.sym == SDLK_c) light.z -= 2;
+		else if (event.key.keysym.sym == SDLK_v) light.z += 2;
 		// CAMERA ROTATION
 		else if (event.key.keysym.sym == SDLK_r) {
 			float theta = -PI/180;
@@ -910,12 +930,17 @@ int main(int argc, char *argv[]) {
 	std::vector<ModelTriangle> triangles2;
 	std::unordered_map<std::string, Colour> colours;
 
-	colours = parseMtl("cornell-box.mtl");
-	triangles = parseObj("cornell-box.obj", 0.4, colours);
+	// colours = parseMtl("cornell-box.mtl");
+	// triangles = parseObj("cornell-box.obj", 0.4, colours);
 
-	triangles2 = parseObj("sphere.obj", 0.4, colours);
+	// triangles2 = parseObj("sphere.obj", 0.4, colours);
 
-	triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
+	// triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
+
+	colours = parseMtl("materials.mtl");
+	std::cout << colours["texture"] << std::endl;
+	triangles = parseObj("logo.obj", 0.3, colours);
+	std::cout << triangles.size() << std::endl;
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
