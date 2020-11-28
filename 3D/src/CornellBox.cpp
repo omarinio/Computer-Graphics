@@ -21,8 +21,8 @@
 
 #define PI 3.14159265359
 
- //glm::vec3 camera(0.0, 0.0, 4.0);
-glm::vec3 camera(150.0, 150.0, 250.0);
+glm::vec3 camera(0.0, 0.0, 4.0);
+//glm::vec3 camera(150.0, 150.0, 250.0);
 float distance = 700;
 glm::mat3 cameraOrientation(
 	glm::vec3(1.0, 0.0, 0.0),
@@ -30,8 +30,8 @@ glm::mat3 cameraOrientation(
 	glm::vec3(0.0, 0.0, 1.0)
 );
 int drawing = 1;
-// glm::vec3 light(0.0,0.85,0.0);
-glm::vec3 light(75.0,75.0,25.0);
+glm::vec3 light(0.0,0.85,0.0);
+//glm::vec3 light(75.0,75.0,25.0);
 float lightStrength = 30;
 bool basic = false;
 bool gouraurdDraw = false;
@@ -218,7 +218,8 @@ float phong(RayTriangleIntersection intersection) {
 	glm::vec3 specLightRay = intersection.intersectionPoint - light;
 	
 	glm::vec3 interpolatedNormal = (1 - intersection.u - intersection.v) * triangle.normals[0] + intersection.u * triangle.normals[1] + intersection.v * triangle.normals[2];
-	//glm::vec3 interpolatedNormal = triangle.normals[0] + (intersection.u * (triangle.normals[1] - triangle.normals[0])) + (intersection.v * (triangle.normals[2] - triangle.normals[0]));
+
+	std::cout << glm::to_string(interpolatedNormal) << std::endl;
 
 	float angleOfIncidence = glm::dot(glm::normalize(lightRay), glm::normalize(interpolatedNormal));
 	//float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
@@ -237,6 +238,8 @@ float phong(RayTriangleIntersection intersection) {
 	if (specular >= 0) {
 		brightness += specular*0.2;
 	}
+
+	//std::cout << brightness << std::endl;
 
 	if (brightness > 1) {
 		brightness = 1;
@@ -306,60 +309,20 @@ void drawTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour)
 	drawLine(window, triangle[2], triangle[0], colour);
 }
 
-// void testFunc(CanvasTriangle triangle, TextureMap texture, DrawingWindow &window, std::vector<std::vector<float>> &depths) {
-// 	CanvasPoint top = triangle.vertices[0];
-//     CanvasPoint mid = triangle.vertices[1];
-//     CanvasPoint bot = triangle.vertices[2];
-	
-// 	std::vector<CanvasPoint> left = interpolatePoints(top, mid, abs(mid.y-top.y)+2);
-// 	std::vector<CanvasPoint> right = interpolatePoints(top, bot, abs(mid.y-top.y)+2);
-// 	std::vector<TexturePoint> left_texture = interpolatePoints(top.texturePoint, mid.texturePoint, abs(mid.y-top.y)+2);
-// 	std::vector<TexturePoint> right_texture = interpolatePoints(top.texturePoint, bot.texturePoint, abs(mid.y-top.y)+2);
-
-// 	for(int i = 0; i < left.size(); i++) {
-// 		int steps = abs(left[i].x - right[i].x);
-
-// 		std::vector<CanvasPoint> points = interpolatePoints(left[i], right[i], steps+2);
-// 		std::vector<TexturePoint> points_texture = interpolatePoints(left_texture[i], right_texture[i], steps+2);
-// 		for(int j = 0; j < points.size(); j++) {
-// 			int x = round(points[j].x);
-// 			int y = round(points[j].y);
-// 			if(x >= 0 && x < window.width && y >= 0 && y < window.height) {
-// 				if(points[j].depth > depths[x][y]) {
-// 					depths[x][y] = points[j].depth;
-// 					window.setPixelColour(x, y, texture.pixels[round(points_texture[j].y)*texture.width + round(points_texture[j].x)]);
-// 				}
-// 			}
-// 		}
-// 	}
-// }
-
 void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap texture, std::vector<std::vector<float>> &depths) {
 	CanvasPoint top = triangle.vertices[0];
 	CanvasPoint mid = triangle.vertices[1];
 	CanvasPoint bot = triangle.vertices[2];
 
 	if (bot.y < mid.y) {
-		// std::swap(bot.y, mid.y);
-		// std::swap(bot.x, mid.x);
-		// std::swap(bot.texturePoint, mid.texturePoint);
-		// std::swap(bot.depth, mid.depth);
 		std::swap(bot, mid);
 	}
 
 	if (mid.y < top.y) {
-		// std::swap(mid.y, top.y);
-		// std::swap(mid.x, top.x);
-		// std::swap(mid.texturePoint, top.texturePoint);
-		// std::swap(mid.depth, top.depth);
 		std::swap(mid, top);
 	}
 
 	if (bot.y < mid.y) {
-		// std::swap(bot.y, mid.y);
-		// std::swap(bot.x, mid.x);
-		// std::swap(bot.texturePoint, mid.texturePoint);
-		// std::swap(bot.depth, mid.depth);
 		std::swap(bot, mid);
 	}
 	CanvasPoint split;
@@ -379,12 +342,6 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 	mid.depth = -1/mid.depth;
 	bot.depth = -1/bot.depth;
 	split.depth = -1/split.depth;
-
-	// CanvasTriangle t_1 = CanvasTriangle(top,mid,split);
-	// CanvasTriangle t_2 = CanvasTriangle(bot,mid,split);
-
-	// testFunc(t_1, texture, window, depths);
-	// testFunc(t_2, texture, window, depths);
 
 	// // TOP TRIANGLE ---------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -581,8 +538,6 @@ void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> &tri
 
 }
 
-
-
 void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 	std::vector<std::vector<float>> depths(window.width, std::vector<float> (window.height, -std::numeric_limits<float>::infinity()));
 
@@ -623,7 +578,7 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 
 }
 
-void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
+void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles, std::unordered_map<std::string, TextureMap> textures) {
 	for (int y = 0; y < window.height; y++) {
 		for (int x = 0; x < window.width; x++) {
 			glm::vec3 falo((WIDTH/2) - x, y - (HEIGHT/2), distance);
@@ -640,13 +595,36 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 					brightness = gouraurd(intersect);
 				}
 				bool shadow = inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex);
-				if (shadow) brightness = 0.2;
-				Colour colour = triangles[intersect.triangleIndex].colour;
-				colour.red *= brightness;
-				colour.blue *= brightness;
-				colour.green *= brightness;
-				uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
-				window.setPixelColour(x, y, set);
+				//if (shadow) brightness = 0.2;
+				// if is texture
+				if (triangles[intersect.triangleIndex].colour.name != "") {
+					ModelTriangle triangle = triangles[intersect.triangleIndex];
+					//TextureMap texture = TextureMap(triangle.colour.name);
+					TextureMap texture = textures[triangle.colour.name];
+					float textureRatioX = (1 - intersect.u - intersect.v) * triangle.texturePoints[0].x + intersect.u * triangle.texturePoints[1].x + intersect.v * triangle.texturePoints[2].x;
+					float textureRatioY = (1 - intersect.u - intersect.v) * triangle.texturePoints[0].y + intersect.u * triangle.texturePoints[1].y + intersect.v * triangle.texturePoints[2].y;
+					int interpolatedTextureX = textureRatioX * texture.width;
+					int interpolatedTextureY = textureRatioY * texture.height;
+					TexturePoint interpolatedTexture(interpolatedTextureX, interpolatedTextureY);
+					uint32_t col = texture.pixels[interpolatedTexture.y*texture.width + interpolatedTexture.x];
+					int red = (col >> 16) & 0xff;
+					int green = (col >> 8) & 0xff;
+					int blue = col & 0xff;
+					red *= brightness;
+					blue *= brightness;
+					green *= brightness;
+					//std::cout << brightness << std::endl;
+					uint32_t set = (255 << 24) + (red << 16) + (green << 8) + blue;
+					window.setPixelColour(x, y, set);
+				} else {
+					Colour colour = triangles[intersect.triangleIndex].colour;
+					colour.red *= brightness;
+					colour.blue *= brightness;
+					colour.green *= brightness;
+					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+					window.setPixelColour(x, y, set);
+				}
+				
 
 			} 
 		}
@@ -692,6 +670,7 @@ void vertexNormals(std::vector<ModelTriangle> &triangles) {
                 }
             }
             vertex = vertex / float(count);
+			//std::cout << glm::to_string(vertex) << std::endl;
             triangles[i].normals[v] = normalize(vertex);
         }
     }
@@ -759,6 +738,8 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 	}
 
 	if (normalVecs.empty()) {
+		std::cout << output.size() << std::endl;
+		std::cout << "passed" << std::endl;
 		vertexNormals(output);
 	}
 
@@ -769,7 +750,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 	return output;
 }
 
-std::unordered_map<std::string, Colour> parseMtl(std::string filename) {
+std::unordered_map<std::string, Colour> parseMtl(std::string filename, std::unordered_map<std::string, TextureMap> &textures) {
 	std::unordered_map<std::string, Colour> colours;
 	std::string colour;
 
@@ -798,6 +779,8 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename) {
 			// std::cout << colour << std::endl;
 			Colour temp(255, 255, 255);
 			temp.name = tokens[1];
+			TextureMap tex("texture.ppm");
+			textures.insert({"texture.ppm", tex});
 			colours.insert({"texture", temp});
 			//std::cout << colours["texture"] << std::endl;
 		}
@@ -827,18 +810,18 @@ void update(DrawingWindow &window) {
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
 	if (event.type == SDL_KEYDOWN) {
-		if (event.key.keysym.sym == SDLK_LEFT) camera.x += 2;
-		else if (event.key.keysym.sym == SDLK_RIGHT) camera.x -= 2;
-		else if (event.key.keysym.sym == SDLK_UP) camera.y -= 2;
-		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 2;
+		if (event.key.keysym.sym == SDLK_LEFT) camera.x += 0.1;
+		else if (event.key.keysym.sym == SDLK_RIGHT) camera.x -= 0.1;
+		else if (event.key.keysym.sym == SDLK_UP) camera.y -= 0.1;
+		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 0.1;
 		else if (event.key.keysym.sym == SDLK_s) camera.z += 0.1;
 		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
-		else if (event.key.keysym.sym == SDLK_b) light.y -= 2;
-		else if (event.key.keysym.sym == SDLK_n) light.y += 2;
-		else if (event.key.keysym.sym == SDLK_z) light.x -= 2;
-		else if (event.key.keysym.sym == SDLK_x) light.x += 2; 
-		else if (event.key.keysym.sym == SDLK_c) light.z -= 2;
-		else if (event.key.keysym.sym == SDLK_v) light.z += 2;
+		else if (event.key.keysym.sym == SDLK_b) light.y -= 0.1;
+		else if (event.key.keysym.sym == SDLK_n) light.y += 0.1;
+		else if (event.key.keysym.sym == SDLK_z) light.x -= 0.1;
+		else if (event.key.keysym.sym == SDLK_x) light.x += 0.1; 
+		else if (event.key.keysym.sym == SDLK_c) light.z -= 0.1;
+		else if (event.key.keysym.sym == SDLK_v) light.z += 0.1;
 		// CAMERA ROTATION
 		else if (event.key.keysym.sym == SDLK_r) {
 			float theta = -PI/180;
@@ -967,8 +950,11 @@ int main(int argc, char *argv[]) {
 	SDL_Event event;
 
 	std::vector<ModelTriangle> triangles;
-	std::vector<ModelTriangle> triangles2;
+	// std::vector<ModelTriangle> triangles2;
+	// std::vector<ModelTriangle> triangles3;
 	std::unordered_map<std::string, Colour> colours;
+	// std::unordered_map<std::string, Colour> colours2;
+	std::unordered_map<std::string, TextureMap> textures;
 
 	// colours = parseMtl("cornell-box.mtl");
 	// triangles = parseObj("cornell-box.obj", 0.4, colours);
@@ -977,8 +963,10 @@ int main(int argc, char *argv[]) {
 
 	// triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
 
-	colours = parseMtl("materials.mtl");
-	triangles = parseObj("logo.obj", 0.3, colours);
+	colours = parseMtl("materials.mtl", textures);
+	triangles = parseObj("logo.obj", 0.003, colours);
+
+	// triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
 
 	//colours = parseMtl("logo-test.mtl");
 	//triangles = parseObj("logo-obj.obj", 0.3, colours);
@@ -994,7 +982,7 @@ int main(int argc, char *argv[]) {
 		} else if (drawing == RASTERISE) {
 			drawCornell(window, triangles);
 		} else {
-			raytraceCornell(window, triangles);
+			raytraceCornell(window, triangles, textures);
 		}
 
 		// Need to render the frame at the end, or nothing actually gets shown on the screen !
