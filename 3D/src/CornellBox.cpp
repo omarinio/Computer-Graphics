@@ -12,6 +12,8 @@
 #include <glm/vec3.hpp> 
 #include <glm/gtx/string_cast.hpp>
 #include <unordered_map>
+#include <iostream>
+#include <algorithm>
 
 #define WIDTH 600
 #define HEIGHT 600
@@ -616,6 +618,9 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 					// repack the colour with brightness applied and set colour in window
 					uint32_t set = (255 << 24) + (red << 16) + (green << 8) + blue;
 					window.setPixelColour(x, y, set);
+				} else if (triangles[intersect.triangleIndex].mirror == true) {
+					uint32_t set = (255 << 24) + (0 << 16) + (0 << 8) + 255;
+					window.setPixelColour(x, y, set);
 				} else {
 					Colour colour = triangles[intersect.triangleIndex].colour;
 					colour.red *= brightness;
@@ -711,6 +716,9 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 					triangle.normals[1] = normalVecs[stoi(b[0])-1];
 					triangle.normals[2] = normalVecs[stoi(c[0])-1];
 				} 
+				if (colour.compare("Mirror\r") == 0)  {
+					triangle.mirror = true;
+				}
 				output.push_back(triangle);
 			} else {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
@@ -722,6 +730,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			}
 		} else if (tokens[0] == "usemtl") {
 			colour = tokens[1];
+			//std::cout << colour << std::endl;
 		} else if (tokens[0] == "vt") {
 			TexturePoint temp = TexturePoint(stof(tokens[1]), stof(tokens[2]));
 			textureVertices.push_back(temp);
