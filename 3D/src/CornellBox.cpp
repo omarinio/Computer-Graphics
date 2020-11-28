@@ -219,7 +219,7 @@ float phong(RayTriangleIntersection intersection) {
 	
 	glm::vec3 interpolatedNormal = (1 - intersection.u - intersection.v) * triangle.normals[0] + intersection.u * triangle.normals[1] + intersection.v * triangle.normals[2];
 
-	std::cout << glm::to_string(interpolatedNormal) << std::endl;
+	//std::cout << glm::to_string(interpolatedNormal) << std::endl;
 
 	float angleOfIncidence = glm::dot(glm::normalize(lightRay), glm::normalize(interpolatedNormal));
 	//float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
@@ -716,6 +716,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 				output.push_back(triangle);
 			} else {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
+				triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
 				//std::cout << triangle.colour << std::endl;
 				//std::cout << colours[colour].name << std::endl;
 				 //std::cout << colour << std::endl;
