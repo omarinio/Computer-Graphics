@@ -219,8 +219,6 @@ float phong(RayTriangleIntersection intersection) {
 	
 	glm::vec3 interpolatedNormal = (1 - intersection.u - intersection.v) * triangle.normals[0] + intersection.u * triangle.normals[1] + intersection.v * triangle.normals[2];
 
-	//std::cout << glm::to_string(interpolatedNormal) << std::endl;
-
 	float angleOfIncidence = glm::dot(glm::normalize(lightRay), glm::normalize(interpolatedNormal));
 	//float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
 	float brightness = lightStrength/(4 * PI * length*length);
@@ -238,8 +236,6 @@ float phong(RayTriangleIntersection intersection) {
 	if (specular >= 0) {
 		brightness += specular*0.2;
 	}
-
-	//std::cout << brightness << std::endl;
 
 	if (brightness > 1) {
 		brightness = 1;
@@ -595,25 +591,29 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 					brightness = gouraurd(intersect);
 				}
 				bool shadow = inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex);
-				//if (shadow) brightness = 0.2;
+				if (shadow) brightness = 0.2;
 				// if is texture
 				if (triangles[intersect.triangleIndex].colour.name != "") {
 					ModelTriangle triangle = triangles[intersect.triangleIndex];
-					//TextureMap texture = TextureMap(triangle.colour.name);
+					// get texture map 
 					TextureMap texture = textures[triangle.colour.name];
+					// interpolate the texture point (texture points in .obj file are given as ratios so we interpolate the ratio)
 					float textureRatioX = (1 - intersect.u - intersect.v) * triangle.texturePoints[0].x + intersect.u * triangle.texturePoints[1].x + intersect.v * triangle.texturePoints[2].x;
 					float textureRatioY = (1 - intersect.u - intersect.v) * triangle.texturePoints[0].y + intersect.u * triangle.texturePoints[1].y + intersect.v * triangle.texturePoints[2].y;
+					// multiply by width and height of texture to get real coordinates
 					int interpolatedTextureX = textureRatioX * texture.width;
 					int interpolatedTextureY = textureRatioY * texture.height;
 					TexturePoint interpolatedTexture(interpolatedTextureX, interpolatedTextureY);
+					// get packed colour of texture
 					uint32_t col = texture.pixels[interpolatedTexture.y*texture.width + interpolatedTexture.x];
+					// unpack colour and apply brightness on each individual colour channel
 					int red = (col >> 16) & 0xff;
 					int green = (col >> 8) & 0xff;
 					int blue = col & 0xff;
 					red *= brightness;
 					blue *= brightness;
 					green *= brightness;
-					//std::cout << brightness << std::endl;
+					// repack the colour with brightness applied and set colour in window
 					uint32_t set = (255 << 24) + (red << 16) + (green << 8) + blue;
 					window.setPixelColour(x, y, set);
 				} else {
@@ -687,8 +687,6 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 	std::string line;
 
 	if (filename == "logo.obj") colour = "texture";
-
-	//std::cout << "FALO:" << colours[colour].name << std::endl;
 	
 	while(std::getline(File, line)) {
 		if(line == "") continue;
@@ -717,9 +715,6 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			} else {
 				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
 				triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
-				//std::cout << triangle.colour << std::endl;
-				//std::cout << colours[colour].name << std::endl;
-				 //std::cout << colour << std::endl;
 				triangle.texturePoints[0] = textureVertices[stoi(a[1])-1];
 				triangle.texturePoints[1] = textureVertices[stoi(b[1])-1];
 				triangle.texturePoints[2] = textureVertices[stoi(c[1])-1];
@@ -727,7 +722,6 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			}
 		} else if (tokens[0] == "usemtl") {
 			colour = tokens[1];
-			//std::cout << colour << std::endl;
 		} else if (tokens[0] == "vt") {
 			TexturePoint temp = TexturePoint(stof(tokens[1]), stof(tokens[2]));
 			textureVertices.push_back(temp);
@@ -739,12 +733,8 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 	}
 
 	if (normalVecs.empty()) {
-		std::cout << output.size() << std::endl;
-		std::cout << "passed" << std::endl;
 		vertexNormals(output);
 	}
-
-	//std::cout << textureVertices.size() << std::endl;
 
 	File.close();
 
@@ -780,8 +770,8 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename, std::unor
 			// std::cout << colour << std::endl;
 			Colour temp(255, 255, 255);
 			temp.name = tokens[1];
-			TextureMap tex("texture.ppm");
-			textures.insert({"texture.ppm", tex});
+			TextureMap tex(tokens[1]);
+			textures.insert({tokens[1], tex});
 			colours.insert({"texture", temp});
 			//std::cout << colours["texture"] << std::endl;
 		}
@@ -951,26 +941,23 @@ int main(int argc, char *argv[]) {
 	SDL_Event event;
 
 	std::vector<ModelTriangle> triangles;
-	// std::vector<ModelTriangle> triangles2;
-	// std::vector<ModelTriangle> triangles3;
+	std::vector<ModelTriangle> triangles2;
+	std::vector<ModelTriangle> triangles3;
 	std::unordered_map<std::string, Colour> colours;
-	// std::unordered_map<std::string, Colour> colours2;
+	std::unordered_map<std::string, Colour> colours2;
 	std::unordered_map<std::string, TextureMap> textures;
 
-	// colours = parseMtl("cornell-box.mtl");
-	// triangles = parseObj("cornell-box.obj", 0.4, colours);
+	colours = parseMtl("cornell-box.mtl", textures);
+	triangles = parseObj("cornell-box.obj", 0.4, colours);
 
-	// triangles2 = parseObj("sphere.obj", 0.4, colours);
+	triangles2 = parseObj("sphere.obj", 0.4, colours);
 
-	// triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
+	triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
 
-	colours = parseMtl("materials.mtl", textures);
-	triangles = parseObj("logo.obj", 0.003, colours);
+	colours2 = parseMtl("materials.mtl", textures);
+	triangles3 = parseObj("logo.obj", 0.002, colours2);
 
-	// triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
-
-	//colours = parseMtl("logo-test.mtl");
-	//triangles = parseObj("logo-obj.obj", 0.3, colours);
+	triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
