@@ -618,9 +618,25 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 					// repack the colour with brightness applied and set colour in window
 					uint32_t set = (255 << 24) + (red << 16) + (green << 8) + blue;
 					window.setPixelColour(x, y, set);
+				
+				// if surface is a mirror
 				} else if (triangles[intersect.triangleIndex].mirror == true) {
-					uint32_t set = (255 << 24) + (0 << 16) + (0 << 8) + 255;
-					window.setPixelColour(x, y, set);
+					glm::vec3 lightRay = light - intersection.intersectionPoint;
+					glm::vec3 normal = triangles[intersect.triangleIndex].normal;
+
+					glm::vec3 angleOfReflection = glm::normalize(lightRay) - ((2.0f*normal)*glm::dot(glm::normalize(lightRay), normal));
+					angleOfReflection = normalize(cameraOrientation * angleOfReflection);
+					RayTriangleIntersection intersect2 = getClosestIntersection(triangles, angleOfReflection);
+
+					if (!std::isinf(intersect2.distanceFromCamera)) {
+						Colour colour = triangles[intersect2.triangleIndex].colour;
+						colour.red *= brightness;
+						colour.blue *= brightness;
+						colour.green *= brightness;
+						uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+						window.setPixelColour(x, y, set);
+					}	
+
 				} else {
 					Colour colour = triangles[intersect.triangleIndex].colour;
 					colour.red *= brightness;
