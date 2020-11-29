@@ -33,14 +33,14 @@ glm::mat3 cameraOrientation(
 );
 int drawing = 1;
 glm::vec3 light(0.0,0.85,0.0);
-glm::vec3 light2(0.0,1.15,0.0);
-glm::vec3 light3(0.0,0.55,0.0);
-glm::vec3 light4(0.3,0.85,0.0);
-glm::vec3 light5(-0.3,0.85,0.0);
-glm::vec3 light6(0.3,1.15,0.0);
-glm::vec3 light7(0.3,0.55,0.0);
-glm::vec3 light8(-0.3,0.55,0.0);
-glm::vec3 light9(-0.3,1.15,0.0);
+glm::vec3 light2(0.0,0.85,0.1);
+glm::vec3 light3(0.0,0.85,-0.1);
+glm::vec3 light4(0.1,0.85,0.0);
+glm::vec3 light5(-0.1,0.85,0.1);
+glm::vec3 light6(0.1,0.85,-0.1);
+glm::vec3 light7(0.1,0.85,0.1);
+glm::vec3 light8(-0.1,0.85,0.0);
+glm::vec3 light9(-0.1,0.85,-0.1);
 std::vector<glm::vec3> lights;
 
 //glm::vec3 light(75.0,75.0,25.0);
@@ -578,19 +578,31 @@ void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> &tri
 		drawTriangle(window, triangle, Colour(255,255,255));
  	}
 
-	glm::vec3 cameraToVertex = glm::vec3(lights[0].x - camera.x, lights[0].y - camera.y, lights[0].z - camera.z);
+	for (int j = 0; j < lights.size(); j++) {
+		glm::vec3 cameraToVertex = glm::vec3(lights[j].x - camera.x, lights[j].y - camera.y, lights[j].z - camera.z);
 
-	glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
+		glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
 
-	int u = -(distance * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
-	int v = (distance * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
+		int u = -(distance * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
+		int v = (distance * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
 
-	// prints red pixels to show light location
-	window.setPixelColour(u, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
-	window.setPixelColour(u+1, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
-	window.setPixelColour(u, v+1, (255 << 24) + (255 << 16) + (0 << 8) + 0);
-	window.setPixelColour(u-1, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
-	window.setPixelColour(u, v-1, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+		// prints red pixels to show light location
+		window.setPixelColour(u, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+	}
+
+	// glm::vec3 cameraToVertex = glm::vec3(lights[0].x - camera.x, lights[0].y - camera.y, lights[0].z - camera.z);
+
+	// glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
+
+	// int u = -(distance * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
+	// int v = (distance * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
+
+	// // prints red pixels to show light location
+	// window.setPixelColour(u, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+	// window.setPixelColour(u+1, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+	// window.setPixelColour(u, v+1, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+	// window.setPixelColour(u-1, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
+	// window.setPixelColour(u, v-1, (255 << 24) + (255 << 16) + (0 << 8) + 0);
 
 
 }
@@ -1049,14 +1061,14 @@ int main(int argc, char *argv[]) {
 	colours = parseMtl("cornell-box.mtl", textures);
 	triangles = parseObj("cornell-box.obj", 0.4, colours);
 
-	//triangles2 = parseObj("sphere.obj", 0.4, colours);
+	triangles2 = parseObj("sphere.obj", 0.4, colours);
 
-	//triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
+	triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
 
-	//colours2 = parseMtl("materials.mtl", textures);
-	//triangles3 = parseObj("logo.obj", 0.002, colours2);
+	colours2 = parseMtl("materials.mtl", textures);
+	triangles3 = parseObj("logo.obj", 0.002, colours2);
 
-	//aaatriangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
+	triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
