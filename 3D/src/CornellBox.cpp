@@ -192,9 +192,6 @@ float gouraurd(RayTriangleIntersection intersection, glm::vec3 light) {
 	float angleOfIncidence = (1 - intersection.u - intersection.v) * brightnesses[0] + intersection.u * brightnesses[1] + intersection.v * brightnesses[2];
 
 	float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
-	// if (angleOfIncidence > 0) {
-	// 	brightness *= angleOfIncidence;
-	// }
 
 	std::vector<glm::vec3> reflections;
 	for(int i = 0; i < 3; i++) {
@@ -228,7 +225,6 @@ float phong(RayTriangleIntersection intersection, glm::vec3 light) {
 	glm::vec3 interpolatedNormal = (1 - intersection.u - intersection.v) * triangle.normals[0] + intersection.u * triangle.normals[1] + intersection.v * triangle.normals[2];
 
 	float angleOfIncidence = glm::dot(glm::normalize(lightRay), glm::normalize(interpolatedNormal));
-	//float brightness = lightStrength*angleOfIncidence/(4 * PI * length*length);
 	float brightness = lightStrength/(4 * PI * length*length);
 
 	glm::vec3 angleOfReflection = glm::normalize(specLightRay) - (2.0f*glm::normalize(interpolatedNormal)*glm::dot(glm::normalize(specLightRay), glm::normalize(interpolatedNormal)));
@@ -257,7 +253,6 @@ float phong(RayTriangleIntersection intersection, glm::vec3 light) {
 RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint) {
 	RayTriangleIntersection closestIntersection;
 	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
-	//glm::vec3 reflectionRay = normalize(intersectionPoint - rayDirection);
 
 	// possibleSolution returns t,u,v
 	// t = distance along the ray from the camera to the intersection point
@@ -420,7 +415,6 @@ void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap text
 		std::vector<CanvasPoint> points = interpolatePoints(left[i], right[i], steps+2);
 
 		std::vector<TexturePoint> texturePoints = interpolatePoints(leftTexture[i], rightTexture[i], steps+2);
-		//std::cout << points.size() << std::endl;
 
 		for (int c = 0; c < points.size(); c++) {
 			int newX = round(points[c].x);
@@ -611,7 +605,6 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 
 		if (triangles[i].colour.name != "") {
 			texture = TextureMap(triangles[i].colour.name);
-			//std::cout << triangles[i].colour.name << std::endl;
 			isTexture = true;
 		}
 		for (int j = 0; j < 3; j++) {
@@ -633,7 +626,6 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 		}
 
 		if (isTexture == true) {
-			//std::cout << "falo" << std::endl;
 			textureFill(window, triangle, texture, depths);
 		} else fillCornell(window, triangle, triangles[i].colour, depths);
 		
@@ -646,8 +638,8 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 		for (int x = 0; x < window.width; x++) { 
 			glm::vec3 falo((WIDTH/2) - x, y - (HEIGHT/2), distance);
 			glm::vec3 ray = camera - falo;
-			ray = normalize(ray * glm::inverse(cameraOrientation));
-			//ray = normalize(cameraOrientation * ray);
+			//ray = normalize(ray * glm::inverse(cameraOrientation));
+			ray = normalize(cameraOrientation * ray);
 			RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
 			if (!std::isinf(intersect.distanceFromCamera)) {
 				float brightness = 0;
@@ -753,7 +745,6 @@ void vertexNormals(std::vector<ModelTriangle> &triangles) {
                 }
             }
             vertex = vertex / float(count);
-			//std::cout << glm::to_string(vertex) << std::endl;
             triangles[i].normals[v] = normalize(vertex);
         }
     }
@@ -808,7 +799,6 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			}
 		} else if (tokens[0] == "usemtl") {
 			colour = tokens[1];
-			//std::cout << colour << std::endl;
 		} else if (tokens[0] == "vt") {
 			TexturePoint temp = TexturePoint(stof(tokens[1]), stof(tokens[2]));
 			textureVertices.push_back(temp);
@@ -850,17 +840,11 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename, std::unor
 			Colour temp(int(stof(a)*255), int(stof(b)*255), int(stof(c)*255));
 			colours.insert({colour, temp});
 		} else if (tokens[0] == "map_Kd") {
-			// Colour temp = colours[colour];
-			// temp.name = tokens[1];
-			// std::cout << temp.name << std::endl;
-			// colours[colour] = temp;
-			// std::cout << colour << std::endl;
 			Colour temp(255, 255, 255);
 			temp.name = tokens[1];
 			TextureMap tex(tokens[1]);
 			textures.insert({tokens[1], tex});
 			colours.insert({"texture", temp});
-			//std::cout << colours["texture"] << std::endl;
 		}
 	}
 
@@ -1092,4 +1076,3 @@ int main(int argc, char *argv[]) {
 		window.renderFrame();
 	}
 }
-
