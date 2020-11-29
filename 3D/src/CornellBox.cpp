@@ -289,7 +289,7 @@ RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triang
 
 RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection) {
 	RayTriangleIntersection closestIntersection;
-	//closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
+	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
 	float maxDist = std::numeric_limits<float>::infinity();
 
 	// possibleSolution returns t,u,v
@@ -334,7 +334,7 @@ RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triang
 				}
 
 				maxDist = t;
-				
+
 				
 			}
 		}
