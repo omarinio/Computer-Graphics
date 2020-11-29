@@ -248,6 +248,45 @@ float phong(RayTriangleIntersection intersection) {
 	return brightness;
 }
 
+RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint) {
+	RayTriangleIntersection closestIntersection;
+	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
+	//glm::vec3 reflectionRay = normalize(intersectionPoint - rayDirection);
+
+	// possibleSolution returns t,u,v
+	// t = distance along the ray from the camera to the intersection point
+	// u = the proportion along the triangle's first edge that the intersection point occurs
+	// v = the proportion along the triangle's second edge that the intersection point occurs
+	for (int i = 0; i < triangles.size(); i++) {
+		if (triangles[i].mirror == false) {
+			ModelTriangle triangle = triangles[i];
+			glm::vec3 e0 = triangle.vertices[1] - triangle.vertices[0];
+			glm::vec3 e1 = triangle.vertices[2] - triangle.vertices[0];
+			glm::vec3 SPVector = intersectionPoint - triangle.vertices[0];
+			glm::mat3 DEMatrix(-rayDirection, e0, e1);
+			glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector; 
+			float t = possibleSolution.x, u = possibleSolution.y, v = possibleSolution.z;
+
+			if ((u >= 0.0) && (u <= 1.0) && (v >= 0.0) && (v <= 1.0) && ((u + v) <= 1.0)) {
+				if (closestIntersection.distanceFromCamera > t && t > 0.1f) {
+					closestIntersection.distanceFromCamera = t;
+					closestIntersection.intersectedTriangle = triangle;
+					closestIntersection.triangleIndex = i;
+					glm::vec3 intersectionPoint = triangle.vertices[0] + 
+						u*(triangle.vertices[1]-triangle.vertices[0]) + 
+						v*(triangle.vertices[2]-triangle.vertices[0]);
+
+					closestIntersection.intersectionPoint = intersectionPoint;
+					closestIntersection.u = u;
+					closestIntersection.v = v;
+				}
+			}
+		}
+	}
+	return closestIntersection;
+
+}
+
 RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection) {
 	RayTriangleIntersection closestIntersection;
 	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
@@ -267,16 +306,32 @@ RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triang
 
 		if ((u >= 0.0) && (u <= 1.0) && (v >= 0.0) && (v <= 1.0) && ((u + v) <= 1.0)) {
 			if (closestIntersection.distanceFromCamera > t && t > 0) {
-				closestIntersection.distanceFromCamera = t;
-				closestIntersection.intersectedTriangle = triangle;
-				closestIntersection.triangleIndex = i;
 				glm::vec3 intersectionPoint = triangle.vertices[0] + 
-					u*(triangle.vertices[1]-triangle.vertices[0]) + 
-					v*(triangle.vertices[2]-triangle.vertices[0]);
+						u*(triangle.vertices[1]-triangle.vertices[0]) + 
+						v*(triangle.vertices[2]-triangle.vertices[0]);
 
-				closestIntersection.intersectionPoint = intersectionPoint;
-				closestIntersection.u = u;
-				closestIntersection.v = v;
+				if (triangles[i].mirror == true) {
+					glm::vec3 normal = triangles[i].normal;
+					glm::vec3 angleOfReflection = rayDirection - ((2.0f*glm::dot(rayDirection, normal)*normal));
+					angleOfReflection = normalize(angleOfReflection);
+
+					RayTriangleIntersection reflection = reflectionIntersection(triangles, angleOfReflection, i, intersectionPoint);
+					closestIntersection = reflection;
+					if (std::isinf(reflection.distanceFromCamera)) {
+						closestIntersection.isInf = true;
+					}
+
+				} else {
+					closestIntersection.distanceFromCamera = t;
+					closestIntersection.intersectedTriangle = triangle;
+					closestIntersection.triangleIndex = i;
+					
+
+					closestIntersection.intersectionPoint = intersectionPoint;
+					closestIntersection.u = u;
+					closestIntersection.v = v;
+				}
+				
 			}
 		}
 	}
@@ -578,10 +633,11 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 
 void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles, std::unordered_map<std::string, TextureMap> textures) {
 	for (int y = 0; y < window.height; y++) {
-		for (int x = 0; x < window.width; x++) {
+		for (int x = 0; x < window.width; x++) { 
 			glm::vec3 falo((WIDTH/2) - x, y - (HEIGHT/2), distance);
 			glm::vec3 ray = camera - falo;
-			ray = normalize(cameraOrientation * ray);
+			ray = normalize(ray * glm::inverse(cameraOrientation));
+			//ray = normalize(cameraOrientation * ray);
 			RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
 			if (!std::isinf(intersect.distanceFromCamera)) {
 				float brightness;
@@ -620,30 +676,48 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 					window.setPixelColour(x, y, set);
 				
 				// if surface is a mirror
-				} else if (triangles[intersect.triangleIndex].mirror == true) {
-					glm::vec3 lightRay = light - intersection.intersectionPoint;
-					glm::vec3 normal = triangles[intersect.triangleIndex].normal;
+				} 
+				// else if (triangles[intersect.triangleIndex].mirror == true) {
+				// 	glm::vec3 normal = triangles[intersect.triangleIndex].normal;
+				// 	//glm::vec3 cameraRay = (camera * cameraOrientation) - intersect.intersectionPoint;
+				// 	ModelTriangle triangle = triangles[intersect.triangleIndex];
+					
+				// 	//std::cout << glm::dot(ray, normal) << std::endl;
 
-					glm::vec3 angleOfReflection = glm::normalize(lightRay) - ((2.0f*normal)*glm::dot(glm::normalize(lightRay), normal));
-					angleOfReflection = normalize(cameraOrientation * angleOfReflection);
-					RayTriangleIntersection intersect2 = getClosestIntersection(triangles, angleOfReflection);
+				// 	// std::cout << "normal 1: " << glm::to_string(normal) << std::endl;
+				// 	// std::cout << "normal 2: " << glm::to_string(normal2) << std::endl;
 
-					if (!std::isinf(intersect2.distanceFromCamera)) {
-						Colour colour = triangles[intersect2.triangleIndex].colour;
+				// 	glm::vec3 angleOfReflection = ray - ((2.0f*glm::dot(ray, normal)*normal));
+				// 	angleOfReflection = normalize(angleOfReflection);
+				// 	RayTriangleIntersection intersect2 = reflectionIntersection(triangles, angleOfReflection, intersect.triangleIndex);
+
+				// 	//std::cout << intersect2.distanceFromCamera << std::endl;
+
+				// 	if (!std::isinf(intersect2.distanceFromCamera)) {
+				// 		std::cout << "intersect1 index: " << intersect.triangleIndex << std::endl;
+				// 		std::cout << "intersect2 index: " << intersect2.triangleIndex << std::endl;
+				// 		Colour colour = triangles[intersect2.triangleIndex].colour;
+				// 		colour.red *= brightness;
+				// 		colour.blue *= brightness;
+				// 		colour.green *= brightness;
+				// 		uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
+				// 		window.setPixelColour(x, y, set);
+				// 	}	
+
+				//} 
+				else {
+					if (intersect.isInf == true) {
+						uint32_t set = (255 << 24) + (0 << 16) + (0 << 8) + 0;
+						window.setPixelColour(x, y, set);
+					} else {
+						Colour colour = triangles[intersect.triangleIndex].colour;
 						colour.red *= brightness;
 						colour.blue *= brightness;
 						colour.green *= brightness;
 						uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
 						window.setPixelColour(x, y, set);
-					}	
-
-				} else {
-					Colour colour = triangles[intersect.triangleIndex].colour;
-					colour.red *= brightness;
-					colour.blue *= brightness;
-					colour.green *= brightness;
-					uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
-					window.setPixelColour(x, y, set);
+					}
+					
 				}
 				
 
