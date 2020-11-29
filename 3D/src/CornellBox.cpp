@@ -33,15 +33,21 @@ glm::mat3 cameraOrientation(
 );
 int drawing = 1;
 glm::vec3 light(0.0,0.85,0.0);
+glm::vec3 light2(0.0,1.15,0.0);
+glm::vec3 light3(0.0,0.55,0.0);
+glm::vec3 light4(0.3,0.85,0.0);
+glm::vec3 light5(-0.3,0.85,0.0);
+glm::vec3 light6(0.3,1.15,0.0);
+glm::vec3 light7(0.3,0.55,0.0);
+glm::vec3 light8(-0.3,0.55,0.0);
+glm::vec3 light9(-0.3,1.15,0.0);
+std::vector<glm::vec3> lights;
+
 //glm::vec3 light(75.0,75.0,25.0);
 float lightStrength = 30;
 bool basic = false;
 bool gouraurdDraw = false;
 bool phongDraw = true;
-//glm::vec3 light(-0.64901096, 2.739334, 0.532032);
-//glm::vec3 light(-0.64901096, 2.7384973, -0.51796794);
-//glm::vec3 light(0.650989, 2.7384973, -0.51796794);
-//glm::vec3 light(0.650989, 2.739334, 0.532032);
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
 	std::vector<float> result;
@@ -116,7 +122,7 @@ std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 t
 	return result;
 }
 
-bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint, size_t index) {
+bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint, size_t index, glm::vec3 light) {
 	bool shadow = false;
 	glm::vec3 shadowRay = light - intersectionPoint;
 	float length = glm::length(shadowRay);
@@ -142,7 +148,7 @@ bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint,
 	return shadow;
 }
 
-float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal) {
+float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal, glm::vec3 light) {
 	glm::vec3 lightRay = light - intersectionPoint;
 	glm::vec3 cameraRay = (camera * cameraOrientation) - intersectionPoint;
 	float length = glm::length(lightRay);
@@ -172,7 +178,7 @@ float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal) {
 	return brightness;
 }
 
-float gouraurd(RayTriangleIntersection intersection) {
+float gouraurd(RayTriangleIntersection intersection, glm::vec3 light) {
 	glm::vec3 lightRay = light - intersection.intersectionPoint;
 	glm::vec3 cameraRay = (camera * cameraOrientation) - intersection.intersectionPoint;
 	ModelTriangle triangle = intersection.intersectedTriangle;
@@ -212,7 +218,7 @@ float gouraurd(RayTriangleIntersection intersection) {
 	return brightness;
 }
 
-float phong(RayTriangleIntersection intersection) {
+float phong(RayTriangleIntersection intersection, glm::vec3 light) {
 	glm::vec3 lightRay = light - intersection.intersectionPoint;
 	ModelTriangle triangle = intersection.intersectedTriangle;
 	glm::vec3 cameraRay = (camera * cameraOrientation) - intersection.intersectionPoint;
@@ -578,7 +584,7 @@ void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> &tri
 		drawTriangle(window, triangle, Colour(255,255,255));
  	}
 
-	glm::vec3 cameraToVertex = glm::vec3(light.x - camera.x, light.y - camera.y, light.z - camera.z);
+	glm::vec3 cameraToVertex = glm::vec3(lights[0].x - camera.x, lights[0].y - camera.y, lights[0].z - camera.z);
 
 	glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
 
@@ -644,16 +650,22 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 			//ray = normalize(cameraOrientation * ray);
 			RayTriangleIntersection intersect = getClosestIntersection(triangles, ray);
 			if (!std::isinf(intersect.distanceFromCamera)) {
-				float brightness;
-				if (phongDraw) {
-					brightness = phong(intersect);
-				} else if (basic) {
-					brightness = getBrightness(intersect.intersectionPoint, triangles[intersect.triangleIndex].normal);
-				} else {
-					brightness = gouraurd(intersect);
+				float brightness = 0;
+				for (int j = 0; j < lights.size(); j++) {
+					float temp;
+					if (phongDraw) {
+						temp = phong(intersect, lights[j]);
+					} else if (basic) {
+						temp = getBrightness(intersect.intersectionPoint, triangles[intersect.triangleIndex].normal, lights[j]);
+					} else {
+						temp = gouraurd(intersect, lights[j]);
+					}
+					bool shadow = inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex, lights[j]);
+					if (shadow) temp = 0.2;
+
+					brightness += temp;
 				}
-				bool shadow = inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex);
-				if (shadow) brightness = 0.2;
+				brightness = brightness/lights.size();
 				// if is texture
 				if (triangles[intersect.triangleIndex].colour.name != "") {
 					ModelTriangle triangle = triangles[intersect.triangleIndex];
@@ -681,34 +693,6 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 				
 				// if surface is a mirror
 				} 
-				// else if (triangles[intersect.triangleIndex].mirror == true) {
-				// 	glm::vec3 normal = triangles[intersect.triangleIndex].normal;
-				// 	//glm::vec3 cameraRay = (camera * cameraOrientation) - intersect.intersectionPoint;
-				// 	ModelTriangle triangle = triangles[intersect.triangleIndex];
-					
-				// 	//std::cout << glm::dot(ray, normal) << std::endl;
-
-				// 	// std::cout << "normal 1: " << glm::to_string(normal) << std::endl;
-				// 	// std::cout << "normal 2: " << glm::to_string(normal2) << std::endl;
-
-				// 	glm::vec3 angleOfReflection = ray - ((2.0f*glm::dot(ray, normal)*normal));
-				// 	angleOfReflection = normalize(angleOfReflection);
-				// 	RayTriangleIntersection intersect2 = reflectionIntersection(triangles, angleOfReflection, intersect.triangleIndex);
-
-				// 	//std::cout << intersect2.distanceFromCamera << std::endl;
-
-				// 	if (!std::isinf(intersect2.distanceFromCamera)) {
-				// 		std::cout << "intersect1 index: " << intersect.triangleIndex << std::endl;
-				// 		std::cout << "intersect2 index: " << intersect2.triangleIndex << std::endl;
-				// 		Colour colour = triangles[intersect2.triangleIndex].colour;
-				// 		colour.red *= brightness;
-				// 		colour.blue *= brightness;
-				// 		colour.green *= brightness;
-				// 		uint32_t set = (255 << 24) + (colour.red << 16) + (colour.green << 8) + colour.blue;
-				// 		window.setPixelColour(x, y, set);
-				// 	}	
-
-				//} 
 				else {
 					if (intersect.isInf == true) {
 						uint32_t set = (255 << 24) + (0 << 16) + (0 << 8) + 0;
@@ -885,6 +869,32 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename, std::unor
 	return colours;
 }
 
+void initialiseLights() {
+	lights.push_back(light);
+	lights.push_back(light2);
+	lights.push_back(light3);
+	lights.push_back(light4);
+	lights.push_back(light5);
+	lights.push_back(light6);
+	lights.push_back(light7);
+	lights.push_back(light8);
+	lights.push_back(light9);
+}
+
+void moveLights(int move, float amount) {
+	for (int i = 0; i < lights.size(); i++) {
+		if (move == 0){
+			lights[i].x += amount;
+		} else if (move == 1) {
+			lights[i].y += amount;
+		} else {
+			lights[i].z += amount;
+		}
+		
+	}
+}
+
+
 void draw(DrawingWindow &window) {
 	window.clearPixels();
 	for (size_t y = 0; y < window.height; y++) {
@@ -910,12 +920,12 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 0.1;
 		else if (event.key.keysym.sym == SDLK_s) camera.z += 0.1;
 		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
-		else if (event.key.keysym.sym == SDLK_b) light.y -= 0.1;
-		else if (event.key.keysym.sym == SDLK_n) light.y += 0.1;
-		else if (event.key.keysym.sym == SDLK_z) light.x -= 0.1;
-		else if (event.key.keysym.sym == SDLK_x) light.x += 0.1; 
-		else if (event.key.keysym.sym == SDLK_c) light.z -= 0.1;
-		else if (event.key.keysym.sym == SDLK_v) light.z += 0.1;
+		else if (event.key.keysym.sym == SDLK_b) moveLights(1, -0.1);
+		else if (event.key.keysym.sym == SDLK_n) moveLights(1, 0.1);
+		else if (event.key.keysym.sym == SDLK_z) moveLights(0, -0.1);
+		else if (event.key.keysym.sym == SDLK_x) moveLights(0, 0.1);
+		else if (event.key.keysym.sym == SDLK_c) moveLights(2, -0.1);
+		else if (event.key.keysym.sym == SDLK_v) moveLights(2, 0.1);
 		// CAMERA ROTATION
 		else if (event.key.keysym.sym == SDLK_r) {
 			float theta = -PI/180;
@@ -1043,6 +1053,8 @@ int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
 
+	initialiseLights();
+
 	std::vector<ModelTriangle> triangles;
 	std::vector<ModelTriangle> triangles2;
 	std::vector<ModelTriangle> triangles3;
@@ -1053,14 +1065,14 @@ int main(int argc, char *argv[]) {
 	colours = parseMtl("cornell-box.mtl", textures);
 	triangles = parseObj("cornell-box.obj", 0.4, colours);
 
-	triangles2 = parseObj("sphere.obj", 0.4, colours);
+	//triangles2 = parseObj("sphere.obj", 0.4, colours);
 
-	triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
+	//triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
 
-	colours2 = parseMtl("materials.mtl", textures);
-	triangles3 = parseObj("logo.obj", 0.002, colours2);
+	//colours2 = parseMtl("materials.mtl", textures);
+	//triangles3 = parseObj("logo.obj", 0.002, colours2);
 
-	triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
+	//aaatriangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
