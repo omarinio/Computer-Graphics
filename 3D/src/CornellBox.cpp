@@ -20,6 +20,7 @@
 #define WIREFRAME 1
 #define RASTERISE 2
 #define RAYTRACE 3
+#define REFRACTIVE_INDEX 1.5
 
 #define PI 3.14159265359
 
@@ -299,6 +300,71 @@ RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triang
 
 }
 
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
+glm::vec3 refract(glm::vec3 incidence, glm::vec3 n, float indexOfRefraction) {
+	glm::vec3 normal = n;
+	float dot = glm::dot(incidence, normal);
+	float refr1 = indexOfRefraction;
+	float refr2 = 1;
+
+	if (dot < 0.0f) {
+		// outside surface
+		dot = -dot;
+	} else {
+		// inside surface
+		std::swap(refr1, refr2);
+		normal = -normal;
+	}
+
+	float refr = refr1 / refr2;
+
+	glm::vec3 refractedRay = refr * incidence - (refr * dot ) * normal;
+	return refractedRay;
+}
+
+RayTriangleIntersection refractionIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint) {
+	RayTriangleIntersection closestIntersection;
+	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
+
+	// possibleSolution returns t,u,v
+	// t = distance along the ray from the camera to the intersection point
+	// u = the proportion along the triangle's first edge that the intersection point occurs
+	// v = the proportion along the triangle's second edge that the intersection point occurs
+	for (int i = 0; i < triangles.size(); i++) {
+		if (i != index) {
+			ModelTriangle triangle = triangles[i];
+			glm::vec3 e0 = triangle.vertices[1] - triangle.vertices[0];
+			glm::vec3 e1 = triangle.vertices[2] - triangle.vertices[0];
+			glm::vec3 SPVector = intersectionPoint - triangle.vertices[0];
+			glm::mat3 DEMatrix(-rayDirection, e0, e1);
+			glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector; 
+			float t = possibleSolution.x, u = possibleSolution.y, v = possibleSolution.z;
+
+			if ((u >= 0.0) && (u <= 1.0) && (v >= 0.0) && (v <= 1.0) && ((u + v) <= 1.0)) {
+				if (closestIntersection.distanceFromCamera > t && t > 0.0001f) {
+					closestIntersection.distanceFromCamera = t;
+					closestIntersection.intersectedTriangle = triangle;
+					closestIntersection.triangleIndex = i;
+					glm::vec3 intersectionPoint = triangle.vertices[0] + 
+						u*(triangle.vertices[1]-triangle.vertices[0]) + 
+						v*(triangle.vertices[2]-triangle.vertices[0]);
+
+					closestIntersection.intersectionPoint = intersectionPoint;
+					closestIntersection.u = u;
+					closestIntersection.v = v;
+				}
+			}
+		}
+	}
+	if (closestIntersection.intersectedTriangle.glass == true) {
+		glm::vec3 normal = closestIntersection.intersectedTriangle.normal;
+		glm::vec3 falo = refract(rayDirection, normal, REFRACTIVE_INDEX);
+		closestIntersection = refractionIntersection(triangles, falo, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
+	}
+	return closestIntersection;
+
+}
+
 RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection) {
 	RayTriangleIntersection closestIntersection;
 	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
@@ -330,9 +396,21 @@ RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triang
 
 					RayTriangleIntersection reflection = reflectionIntersection(triangles, angleOfReflection, i, intersectionPoint);
 					closestIntersection = reflection;
-					if (std::isinf(reflection.distanceFromCamera)) {
-						closestIntersection.isInf = true;
-					}
+
+				} else if (triangles[i].glass == true) {
+					glm::vec3 normal = triangles[i].normal;
+					glm::vec3 falo = refract(rayDirection, normal, REFRACTIVE_INDEX);
+
+					// if (falo == glm::vec3(0,0,0)) {
+					// 	glm::vec3 angleOfReflection = rayDirection - ((2.0f*glm::dot(rayDirection, normal)*normal));
+					// 	angleOfReflection = normalize(angleOfReflection);
+					// 	RayTriangleIntersection reflection = refractionIntersection(triangles, angleOfReflection, i, intersectionPoint);
+					// 	closestIntersection = reflection;
+					// } else {
+						RayTriangleIntersection refraction = refractionIntersection(triangles, falo, i, intersectionPoint);
+						closestIntersection = refraction;
+					// }
+					
 
 				} else {
 					closestIntersection.distanceFromCamera = t;
@@ -785,6 +863,10 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 	std::string line;
 
 	if (filename.compare("logo.obj") == 0) colour = "texture";
+
+	// if (filename.compare("textured-cornell-box.obj") == 0) colour = "texture";
+
+	// std::cout << colour << std::endl;
 	
 	while(std::getline(File, line)) {
 		if(line == "") continue;
@@ -813,10 +895,12 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			}
 			if (colour.compare("Glass") == 0) {
 				triangle.glass = true;
+			} else {
+				triangle.glass = false;
 			}
 			
-			if(!textureVertices.empty()) {
-				// std::cout << colours[colour].name.length() << std::endl;
+			if(!textureVertices.empty() && a[1] != "") {
+				// std::cout << colours[colour] << std::endl;
 				// ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
 				triangle.texturePoints[0] = textureVertices[stoi(a[1])-1];
 				triangle.texturePoints[1] = textureVertices[stoi(b[1])-1];
@@ -1081,21 +1165,18 @@ int main(int argc, char *argv[]) {
 	std::unordered_map<std::string, Colour> colours2;
 	std::unordered_map<std::string, TextureMap> textures;
 
-	colours = parseMtl("cornell-box.mtl", textures);
-	triangles = parseObj("low_poly_bunny.obj", 0.4, colours);
+	colours = parseMtl("textured-cornell-box.mtl", textures);
 
-	triangles2 = parseObj("sphere-new.obj", 0.4, colours);
+	triangles = parseObj("textured-cornell-box.obj", 0.4, colours);
 
-	triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
+	// triangles2 = parseObj("sphere-new.obj", 0.4, colours);
 
-	// triangles4 = parseObj("low_poly_bunny.obj", 0.1, colours);
+	// triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
 
-	// triangles.insert(triangles.end(), triangles4.begin(), triangles4.end());
+	// colours2 = parseMtl("materials.mtl", textures);
+	// triangles3 = parseObj("logo.obj", 0.002, colours2);
 
-	colours2 = parseMtl("materials.mtl", textures);
-	triangles3 = parseObj("logo.obj", 0.002, colours2);
-
-	triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
+	// triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
