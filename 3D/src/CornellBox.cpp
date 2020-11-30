@@ -259,7 +259,7 @@ RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triang
 	// u = the proportion along the triangle's first edge that the intersection point occurs
 	// v = the proportion along the triangle's second edge that the intersection point occurs
 	for (int i = 0; i < triangles.size(); i++) {
-		if (triangles[i].mirror == false) {
+		if (i != index) {
 			ModelTriangle triangle = triangles[i];
 			glm::vec3 e0 = triangle.vertices[1] - triangle.vertices[0];
 			glm::vec3 e1 = triangle.vertices[2] - triangle.vertices[0];
@@ -269,7 +269,7 @@ RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triang
 			float t = possibleSolution.x, u = possibleSolution.y, v = possibleSolution.z;
 
 			if ((u >= 0.0) && (u <= 1.0) && (v >= 0.0) && (v <= 1.0) && ((u + v) <= 1.0)) {
-				if (closestIntersection.distanceFromCamera > t && t > 0.1f) {
+				if (closestIntersection.distanceFromCamera > t && t > 0.0001f) {
 					closestIntersection.distanceFromCamera = t;
 					closestIntersection.intersectedTriangle = triangle;
 					closestIntersection.triangleIndex = i;
@@ -282,6 +282,17 @@ RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triang
 					closestIntersection.v = v;
 				}
 			}
+		}
+	}
+	if (closestIntersection.intersectedTriangle.mirror == true) {
+		glm::vec3 normal = closestIntersection.intersectedTriangle.normal;
+		glm::vec3 angleOfReflection = rayDirection - ((2.0f*glm::dot(rayDirection, normal)*normal));
+		angleOfReflection = normalize(angleOfReflection);
+
+		RayTriangleIntersection reflection = reflectionIntersection(triangles, angleOfReflection, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
+		closestIntersection = reflection;
+		if (std::isinf(reflection.distanceFromCamera)) {
+			closestIntersection.isInf = true;
 		}
 	}
 	return closestIntersection;
@@ -616,6 +627,7 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 		TextureMap texture;
 
 		if (triangles[i].colour.name != "") {
+			// std::cout << triangles[i].colour.name << std::endl;
 			texture = TextureMap(triangles[i].colour.name);
 			isTexture = true;
 		}
@@ -772,7 +784,7 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 	std::ifstream File(filename);
 	std::string line;
 
-	if (filename == "logo.obj") colour = "texture";
+	if (filename.compare("logo.obj") == 0) colour = "texture";
 	
 	while(std::getline(File, line)) {
 		if(line == "") continue;
@@ -788,29 +800,57 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			std::vector<std::string> a = split(tokens[1],'/');
 			std::vector<std::string> b = split(tokens[2],'/');
 			std::vector<std::string> c = split(tokens[3],'/');
-
-			if (a[1] == "") {
-				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
-				triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
-				if (!normalVecs.empty()) {
-					triangle.normals[0] = normalVecs[stoi(a[0])-1];
-					triangle.normals[1] = normalVecs[stoi(b[0])-1];
-					triangle.normals[2] = normalVecs[stoi(c[0])-1];
-				} 
-				if (colour.compare("Mirror\r") == 0)  {
-					triangle.mirror = true;
-				}
-				output.push_back(triangle);
-			} else {
-				ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
-				triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
+			
+			ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
+			triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
+			if (!normalVecs.empty()) {
+				triangle.normals[0] = normalVecs[stoi(a[2])-1];
+				triangle.normals[1] = normalVecs[stoi(b[2])-1];
+				triangle.normals[2] = normalVecs[stoi(c[2])-1];
+			} 
+			if (colour.compare("Mirror") == 0)  {
+				triangle.mirror = true;
+			}
+			if (colour.compare("Glass") == 0) {
+				triangle.glass = true;
+			}
+			
+			if(!textureVertices.empty()) {
+				// std::cout << colours[colour].name.length() << std::endl;
+				// ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
 				triangle.texturePoints[0] = textureVertices[stoi(a[1])-1];
 				triangle.texturePoints[1] = textureVertices[stoi(b[1])-1];
 				triangle.texturePoints[2] = textureVertices[stoi(c[1])-1];
-				output.push_back(triangle);
 			}
+			
+			output.push_back(triangle);
+
+			// if (a[1] == "") {
+			// 	ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
+			// 	triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
+			// 	if (!normalVecs.empty()) {
+			// 		triangle.normals[0] = normalVecs[stoi(a[0])-1];
+			// 		triangle.normals[1] = normalVecs[stoi(b[0])-1];
+			// 		triangle.normals[2] = normalVecs[stoi(c[0])-1];
+			// 	} 
+			// 	if (colour.compare("Mirror") == 0)  {
+			// 		triangle.mirror = true;
+			// 	}
+			// 	output.push_back(triangle);
+			// } else {
+			// 	ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
+			// 	triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
+			// 	triangle.texturePoints[0] = textureVertices[stoi(a[1])-1];
+			// 	triangle.texturePoints[1] = textureVertices[stoi(b[1])-1];
+			// 	triangle.texturePoints[2] = textureVertices[stoi(c[1])-1];
+			// 	output.push_back(triangle);
+			// }
+			
 		} else if (tokens[0] == "usemtl") {
 			colour = tokens[1];
+			if (colour[colour.size() - 1] == '\r') {
+				colour.erase(colour.size() - 1);
+			}
 		} else if (tokens[0] == "vt") {
 			TexturePoint temp = TexturePoint(stof(tokens[1]), stof(tokens[2]));
 			textureVertices.push_back(temp);
@@ -850,6 +890,9 @@ std::unordered_map<std::string, Colour> parseMtl(std::string filename, std::unor
 			std::string c = tokens[3];
 
 			Colour temp(int(stof(a)*255), int(stof(b)*255), int(stof(c)*255));
+			if (colour[colour.size() - 1] == '\r') {
+				colour.erase(colour.size() - 1);
+			}
 			colours.insert({colour, temp});
 		} else if (tokens[0] == "map_Kd") {
 			Colour temp(255, 255, 255);
@@ -910,8 +953,8 @@ void update(DrawingWindow &window) {
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
 	if (event.type == SDL_KEYDOWN) {
-		if (event.key.keysym.sym == SDLK_LEFT) camera.x += 0.1;
-		else if (event.key.keysym.sym == SDLK_RIGHT) camera.x -= 0.1;
+		if (event.key.keysym.sym == SDLK_LEFT) camera.x -= 0.1;
+		else if (event.key.keysym.sym == SDLK_RIGHT) camera.x += 0.1;
 		else if (event.key.keysym.sym == SDLK_UP) camera.y -= 0.1;
 		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 0.1;
 		else if (event.key.keysym.sym == SDLK_s) camera.z += 0.1;
@@ -1054,16 +1097,21 @@ int main(int argc, char *argv[]) {
 	std::vector<ModelTriangle> triangles;
 	std::vector<ModelTriangle> triangles2;
 	std::vector<ModelTriangle> triangles3;
+	std::vector<ModelTriangle> triangles4;
 	std::unordered_map<std::string, Colour> colours;
 	std::unordered_map<std::string, Colour> colours2;
 	std::unordered_map<std::string, TextureMap> textures;
 
 	colours = parseMtl("cornell-box.mtl", textures);
-	triangles = parseObj("cornell-box.obj", 0.4, colours);
+	triangles = parseObj("low_poly_bunny.obj", 0.4, colours);
 
-	triangles2 = parseObj("sphere.obj", 0.4, colours);
+	triangles2 = parseObj("sphere-new.obj", 0.4, colours);
 
 	triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
+
+	// triangles4 = parseObj("low_poly_bunny.obj", 0.1, colours);
+
+	// triangles.insert(triangles.end(), triangles4.begin(), triangles4.end());
 
 	colours2 = parseMtl("materials.mtl", textures);
 	triangles3 = parseObj("logo.obj", 0.002, colours2);
