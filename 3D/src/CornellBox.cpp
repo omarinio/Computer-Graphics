@@ -824,27 +824,6 @@ std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unor
 			}
 			
 			output.push_back(triangle);
-
-			// if (a[1] == "") {
-			// 	ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
-			// 	triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
-			// 	if (!normalVecs.empty()) {
-			// 		triangle.normals[0] = normalVecs[stoi(a[0])-1];
-			// 		triangle.normals[1] = normalVecs[stoi(b[0])-1];
-			// 		triangle.normals[2] = normalVecs[stoi(c[0])-1];
-			// 	} 
-			// 	if (colour.compare("Mirror") == 0)  {
-			// 		triangle.mirror = true;
-			// 	}
-			// 	output.push_back(triangle);
-			// } else {
-			// 	ModelTriangle triangle(vertices[stoi(a[0])-1], vertices[stoi(b[0])-1], vertices[stoi(c[0])-1], colours[colour]);
-			// 	triangle.normal = glm::normalize(glm::cross(glm::vec3(triangle.vertices[1] - triangle.vertices[0]), glm::vec3(triangle.vertices[2] - triangle.vertices[0])));
-			// 	triangle.texturePoints[0] = textureVertices[stoi(a[1])-1];
-			// 	triangle.texturePoints[1] = textureVertices[stoi(b[1])-1];
-			// 	triangle.texturePoints[2] = textureVertices[stoi(c[1])-1];
-			// 	output.push_back(triangle);
-			// }
 			
 		} else if (tokens[0] == "usemtl") {
 			colour = tokens[1];
