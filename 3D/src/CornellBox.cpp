@@ -50,6 +50,14 @@ bool basic = false;
 bool gouraurdDraw = false;
 bool phongDraw = true;
 
+std::vector<float> interpolateSingleFloats(float from, float to, int numVals);
+std::vector<CanvasPoint> interpolatePoints(CanvasPoint start, CanvasPoint end, int steps);
+std::vector<TexturePoint> interpolatePoints(TexturePoint start, TexturePoint end, int steps);
+std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, int numVals);
+bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint, size_t index, glm::vec3 light);
+float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal, glm::vec3 light);
+float gouraurd(RayTriangleIntersection intersection, glm::vec3 light);
+float phong(RayTriangleIntersection intersection, glm::vec3 light);
 RayTriangleIntersection refractionIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint);
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
@@ -778,15 +786,16 @@ void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangle
 				float brightness = 0;
 				for (int j = 0; j < lights.size(); j++) {
 					float temp;
-					if (phongDraw) {
+					bool shadow = inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex, lights[j]);
+					if (shadow) {
+						temp = 0.2;
+					} else if (phongDraw) {
 						temp = phong(intersect, lights[j]);
 					} else if (basic) {
 						temp = getBrightness(intersect.intersectionPoint, triangles[intersect.triangleIndex].normal, lights[j]);
 					} else {
 						temp = gouraurd(intersect, lights[j]);
 					}
-					bool shadow = inShadow(triangles, intersect.intersectionPoint, intersect.triangleIndex, lights[j]);
-					if (shadow) temp = 0.2;
 
 					brightness += temp;
 				}
