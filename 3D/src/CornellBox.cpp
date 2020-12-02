@@ -26,7 +26,7 @@
 
 glm::vec3 camera(0.0, 0.0, 4.0);
 //glm::vec3 camera(150.0, 150.0, 250.0);
-float distance = 700;
+float focal = 700;
 glm::mat3 cameraOrientation(
 	glm::vec3(1.0, 0.0, 0.0),
 	glm::vec3(0.0, 1.0, 0.0),
@@ -58,7 +58,26 @@ bool inShadow(std::vector<ModelTriangle> triangles, glm::vec3 intersectionPoint,
 float getBrightness(glm::vec3 intersectionPoint, glm::vec3 normal, glm::vec3 light);
 float gouraurd(RayTriangleIntersection intersection, glm::vec3 light);
 float phong(RayTriangleIntersection intersection, glm::vec3 light);
+glm::vec3 refract(glm::vec3 incidence, glm::vec3 n, float indexOfRefraction);
+RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint);
 RayTriangleIntersection refractionIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint);
+RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection);
+void drawLine(DrawingWindow &window, CanvasPoint from, CanvasPoint to, Colour colour);
+void drawTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour);
+void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap texture, std::vector<std::vector<float>> &depths);
+void fillCornell(DrawingWindow &window, CanvasTriangle triangle, Colour colour, std::vector<std::vector<float>> &depths);
+void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> &triangles);
+void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles);
+void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles, std::unordered_map<std::string, TextureMap> textures);
+void lookAt();
+void vertexNormals(std::vector<ModelTriangle> &triangles);
+std::vector<ModelTriangle> parseObj(std::string filename, float scale, std::unordered_map<std::string, Colour> colours);
+std::unordered_map<std::string, Colour> parseMtl(std::string filename, std::unordered_map<std::string, TextureMap> &textures);
+void initialiseLights();
+void moveLights(int move, float amount);
+void draw(DrawingWindow &window);
+void update(DrawingWindow &window);
+void handleEvent(SDL_Event event, DrawingWindow &window);
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numVals) {
 	std::vector<float> result;
@@ -249,7 +268,7 @@ float phong(RayTriangleIntersection intersection, glm::vec3 light) {
 	}
 
 	if (specular >= 0) {
-		brightness += specular*0.2;
+		brightness += specular;
 	}
 
 	if (brightness > 1) {
@@ -697,8 +716,8 @@ void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> &tri
 
 			glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
 
-			int u = -(distance * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
-			int v = (distance * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
+			int u = -(focal * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
+			int v = (focal * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
 
 			triangle.vertices[j] = CanvasPoint(u, v);
 		}
@@ -711,8 +730,8 @@ void drawCornellWireframe(DrawingWindow &window, std::vector<ModelTriangle> &tri
 
 		glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
 
-		int u = -(distance * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
-		int v = (distance * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
+		int u = -(focal * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
+		int v = (focal * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
 
 		// prints red pixels to show light location
 		window.setPixelColour(u, v, (255 << 24) + (255 << 16) + (0 << 8) + 0);
@@ -753,8 +772,8 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 
 			glm::vec3 adjustedVector = cameraToVertex * cameraOrientation;
 
-			int u = -(distance * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
-			int v = (distance * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
+			int u = -(focal * (adjustedVector.x)/(adjustedVector.z)) + (window.width / 2);
+			int v = (focal * (adjustedVector.y)/(adjustedVector.z)) + (window.height / 2);
 
 			triangle.vertices[j] = CanvasPoint(u, v, adjustedVector.z);
 
@@ -777,7 +796,7 @@ void drawCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles) {
 void raytraceCornell(DrawingWindow &window, std::vector<ModelTriangle> &triangles, std::unordered_map<std::string, TextureMap> textures) {
 	for (int y = 0; y < window.height; y++) {
 		for (int x = 0; x < window.width; x++) { 
-			glm::vec3 falo((WIDTH/2) - x, y - (HEIGHT/2), distance);
+			glm::vec3 falo((WIDTH/2) - x, y - (HEIGHT/2), focal);
 			glm::vec3 ray = camera - falo;
 			//ray = normalize(ray * glm::inverse(cameraOrientation));
 			ray = normalize(cameraOrientation * ray);
@@ -1031,7 +1050,6 @@ void moveLights(int move, float amount) {
 	}
 }
 
-
 void draw(DrawingWindow &window) {
 	window.clearPixels();
 	for (size_t y = 0; y < window.height; y++) {
@@ -1053,8 +1071,8 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 	if (event.type == SDL_KEYDOWN) {
 		if (event.key.keysym.sym == SDLK_LEFT) camera.x -= 0.1;
 		else if (event.key.keysym.sym == SDLK_RIGHT) camera.x += 0.1;
-		else if (event.key.keysym.sym == SDLK_UP) camera.y -= 0.1;
-		else if (event.key.keysym.sym == SDLK_DOWN) camera.y += 0.1;
+		else if (event.key.keysym.sym == SDLK_UP) camera.y += 0.1;
+		else if (event.key.keysym.sym == SDLK_DOWN) camera.y -= 0.1;
 		else if (event.key.keysym.sym == SDLK_s) camera.z += 0.1;
 		else if (event.key.keysym.sym == SDLK_w) camera.z -= 0.1;
 		else if (event.key.keysym.sym == SDLK_b) moveLights(1, -0.1);
@@ -1208,14 +1226,14 @@ int main(int argc, char *argv[]) {
 
 	triangles = parseObj("low_poly_bunny.obj", 0.4, colours);
 
-	// triangles2 = parseObj("sphere-new.obj", 0.4, colours);
+	triangles2 = parseObj("sphere-new.obj", 0.4, colours);
 
-	// triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
+	triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
 
-	// colours2 = parseMtl("materials.mtl", textures);
-	// triangles3 = parseObj("logo.obj", 0.002, colours2);
+	colours2 = parseMtl("materials.mtl", textures);
+	triangles3 = parseObj("logo.obj", 0.002, colours2);
 
-	// triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
+	triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
