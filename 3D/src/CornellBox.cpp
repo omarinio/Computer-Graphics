@@ -1095,7 +1095,7 @@ void update(std::vector<ModelTriangle> &triangles) {
 								glm::vec3(0.0,1.0,0),
 								glm::vec3(-sin(theta),0,cos(theta)));
 		
-		for (int t = 314; t < triangles.size(); t++) {
+		for (int t = 314; t < 324; t++) {
 			for (int i = 0; i < 3; i++) {
 				triangles[t].vertices[i] = (triangles[t].vertices[i] * rotationMatrix);
 			}
@@ -1103,21 +1103,19 @@ void update(std::vector<ModelTriangle> &triangles) {
 
 		}
 
-		vertexNormals(triangles);
 	} else if (rotationDirection == 2) {
 		float theta = PI/180;
 		glm::mat3 rotationMatrix(glm::vec3(cos(theta),0,sin(theta)),
 								glm::vec3(0.0,1.0,0),
 								glm::vec3(-sin(theta),0,cos(theta)));
 		
-		for (int t = 314; t < triangles.size(); t++) {
+		for (int t = 314; t < 324; t++) {
 			for (int i = 0; i < 3; i++) {
 				triangles[t].vertices[i] = (triangles[t].vertices[i] * rotationMatrix);
 			}
 			triangles[t].normal = glm::normalize(glm::cross(glm::vec3(triangles[t].vertices[1] - triangles[t].vertices[0]), glm::vec3(triangles[t].vertices[2] - triangles[t].vertices[0])));
 		}
-		
-		vertexNormals(triangles);
+
 	}
 	rotationDirection = 0;
 
@@ -1284,14 +1282,14 @@ int main(int argc, char *argv[]) {
 
 	triangles = parseObj("low_poly_bunny.obj", 0.4, colours);
 
-	// triangles2 = parseObj("sphere-new.obj", 0.4, colours);
+	triangles2 = parseObj("newestsphere.obj", 0.4, colours);
 
-	// triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
+	triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
 
-	// colours2 = parseMtl("materials.mtl", textures);
-	// triangles3 = parseObj("logo.obj", 0.002, colours2);
+	colours2 = parseMtl("materials.mtl", textures);
+	triangles3 = parseObj("logo.obj", 0.002, colours2);
 
-	// triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
+	triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
