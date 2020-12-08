@@ -48,7 +48,7 @@ bool basic = false;
 bool gouraurdDraw = false;
 bool phongDraw = true;
 int rotationDirection = 0;
-int counter = 246;
+int counter = 334;
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numVals);
 std::vector<CanvasPoint> interpolatePoints(CanvasPoint start, CanvasPoint end, int steps);
@@ -375,14 +375,7 @@ RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> &trian
 	} else if (closestIntersection.intersectedTriangle.glass == true) {
 		glm::vec3 normal = closestIntersection.intersectedTriangle.normal;
 		glm::vec3 falo = refract(rayDirection, normal, REFRACTIVE_INDEX);
-		if (falo == glm::vec3(0,0,0)) {
-			glm::vec3 angleOfReflection = rayDirection - ((2.0f*glm::dot(rayDirection, normal)*normal));
-			angleOfReflection = normalize(angleOfReflection);
-			RayTriangleIntersection reflection = refractionIntersection(triangles, angleOfReflection, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
-			closestIntersection = reflection;
-		} else {
-			closestIntersection = refractionIntersection(triangles, falo, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
-		}
+		closestIntersection = refractionIntersection(triangles, falo, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
 	}
 	return closestIntersection;
 
@@ -425,14 +418,7 @@ RayTriangleIntersection refractionIntersection(std::vector<ModelTriangle> &trian
 	if (closestIntersection.intersectedTriangle.glass == true) {
 		glm::vec3 normal = closestIntersection.intersectedTriangle.normal;
 		glm::vec3 falo = refract(rayDirection, normal, REFRACTIVE_INDEX);
-		if (falo == glm::vec3(0,0,0)) {
-			glm::vec3 angleOfReflection = rayDirection - ((2.0f*glm::dot(rayDirection, normal)*normal));
-			angleOfReflection = normalize(angleOfReflection);
-			RayTriangleIntersection reflection = refractionIntersection(triangles, angleOfReflection, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
-			closestIntersection = reflection;
-		} else {
-			closestIntersection = refractionIntersection(triangles, falo, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
-		}
+		closestIntersection = refractionIntersection(triangles, falo, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
 
 	} else if(closestIntersection.intersectedTriangle.mirror == true) {
 		glm::vec3 normal = closestIntersection.intersectedTriangle.normal;
@@ -489,14 +475,7 @@ RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> &trian
 	if (closestIntersection.intersectedTriangle.glass == true) {
 		glm::vec3 normal = closestIntersection.intersectedTriangle.normal;
 		glm::vec3 falo = refract(rayDirection, normal, REFRACTIVE_INDEX);
-		if (falo == glm::vec3(0,0,0)) {
-			glm::vec3 angleOfReflection = rayDirection - ((2.0f*glm::dot(rayDirection, normal)*normal));
-			angleOfReflection = normalize(angleOfReflection);
-			RayTriangleIntersection reflection = refractionIntersection(triangles, angleOfReflection, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
-			closestIntersection = reflection;
-		} else {
-			closestIntersection = refractionIntersection(triangles, falo, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
-		}
+		closestIntersection = refractionIntersection(triangles, falo, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
 
 	} else if(closestIntersection.intersectedTriangle.mirror == true) {
 		glm::vec3 normal = closestIntersection.intersectedTriangle.normal;
@@ -1262,6 +1241,25 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_8) {
 			lightStrength += 1;
 			std::cout << "Light Strength: " << lightStrength << std::endl;
+		} 
+		else if (event.key.keysym.sym == SDLK_9) {
+			std::string filename;
+			std::string temp = std::to_string(counter);
+			if (counter < 10) {
+				filename = "frames2/0000";
+				filename = filename + temp;
+				filename = filename + ".ppm";
+			} else if (counter > 99) {
+				filename = "frames2/00";
+				filename = filename + temp;
+				filename = filename + ".ppm";
+			} else {
+				filename = "frames2/000";
+				filename = filename + temp;
+				filename = filename + ".ppm";
+			}
+			window.savePPM(filename);
+			counter++;
 		}
 
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) window.savePPM("00001.ppm");
@@ -1276,7 +1274,6 @@ int main(int argc, char *argv[]) {
 	std::vector<ModelTriangle> triangles;
 	std::vector<ModelTriangle> triangles2;
 	std::vector<ModelTriangle> triangles3;
-	std::vector<ModelTriangle> triangles4;
 	std::unordered_map<std::string, Colour> colours;
 	std::unordered_map<std::string, Colour> colours2;
 	std::unordered_map<std::string, TextureMap> textures;
