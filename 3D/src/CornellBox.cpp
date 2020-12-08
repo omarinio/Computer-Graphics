@@ -24,8 +24,7 @@
 
 #define PI 3.14159265359
 
-glm::vec3 camera(0.0, 0.0, 4.0);
-//glm::vec3 camera(150.0, 150.0, 250.0);
+glm::vec3 camera(0.0, 0.0, 4.6);
 float focal = 700;
 glm::mat3 cameraOrientation(
 	glm::vec3(1.0, 0.0, 0.0),
@@ -44,12 +43,12 @@ glm::vec3 light8(-0.1,0.85,0.0);
 glm::vec3 light9(-0.1,0.85,-0.1);
 std::vector<glm::vec3> lights;
 
-//glm::vec3 light(75.0,75.0,25.0);
 float lightStrength = 50;
 bool basic = false;
 bool gouraurdDraw = false;
 bool phongDraw = true;
 int rotationDirection = 0;
+int counter = 246;
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numVals);
 std::vector<CanvasPoint> interpolatePoints(CanvasPoint start, CanvasPoint end, int steps);
@@ -61,9 +60,9 @@ float gouraurd(RayTriangleIntersection intersection, glm::vec3 light);
 float phong(RayTriangleIntersection intersection, glm::vec3 light);
 glm::vec3 refract(glm::vec3 incidence, glm::vec3 n, float indexOfRefraction);
 float fresnel(glm::vec3 incidence, glm::vec3 n, float indexOfRefraction);
-RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint);
-RayTriangleIntersection refractionIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint);
-RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection);
+RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> &triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint);
+RayTriangleIntersection refractionIntersection(std::vector<ModelTriangle> &triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint);
+RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> &triangles, glm::vec3 rayDirection);
 void drawLine(DrawingWindow &window, CanvasPoint from, CanvasPoint to, Colour colour);
 void drawTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour);
 void textureFill(DrawingWindow &window, CanvasTriangle triangle, TextureMap texture, std::vector<std::vector<float>> &depths);
@@ -332,7 +331,7 @@ glm::vec3 refract(glm::vec3 incidence, glm::vec3 n, float indexOfRefraction) {
 	return normalize(incidence * eta - n * (-dot + eta*dot));
 }
 
-RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint) {
+RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> &triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint) {
 	RayTriangleIntersection closestIntersection;
 	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
 
@@ -389,7 +388,7 @@ RayTriangleIntersection reflectionIntersection(std::vector<ModelTriangle> triang
 
 }
 
-RayTriangleIntersection refractionIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint) {
+RayTriangleIntersection refractionIntersection(std::vector<ModelTriangle> &triangles, glm::vec3 rayDirection, size_t index, glm::vec3 intersectionPoint) {
 	RayTriangleIntersection closestIntersection;
 	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
 
@@ -447,7 +446,7 @@ RayTriangleIntersection refractionIntersection(std::vector<ModelTriangle> triang
 
 }
 
-RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triangles, glm::vec3 rayDirection) {
+RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> &triangles, glm::vec3 rayDirection) {
 	RayTriangleIntersection closestIntersection;
 	closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
 	float maxDist = std::numeric_limits<float>::infinity();
@@ -471,39 +470,14 @@ RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triang
 						u*(triangle.vertices[1]-triangle.vertices[0]) + 
 						v*(triangle.vertices[2]-triangle.vertices[0]);
 
-				if (triangles[i].mirror == true) {
-					glm::vec3 normal = triangles[i].normal;
-					glm::vec3 angleOfReflection = rayDirection - ((2.0f*glm::dot(rayDirection, normal)*normal));
-					angleOfReflection = normalize(angleOfReflection);
-
-					RayTriangleIntersection reflection = reflectionIntersection(triangles, angleOfReflection, i, intersectionPoint);
-					closestIntersection = reflection;
-
-				} else if (triangles[i].glass == true) {
-					glm::vec3 normal = triangles[i].normal;
-					glm::vec3 falo = refract(rayDirection, normal, REFRACTIVE_INDEX);
-
-					if (falo == glm::vec3(0,0,0)) {
-						glm::vec3 angleOfReflection = rayDirection - ((2.0f*glm::dot(rayDirection, normal)*normal));
-						angleOfReflection = normalize(angleOfReflection);
-						RayTriangleIntersection reflection = refractionIntersection(triangles, angleOfReflection, i, intersectionPoint);
-						closestIntersection = reflection;
-					} else {
-						RayTriangleIntersection refraction = refractionIntersection(triangles, falo, i, intersectionPoint);
-						closestIntersection = refraction;
-					}
+				closestIntersection.distanceFromCamera = t;
+				closestIntersection.intersectedTriangle = triangle;
+				closestIntersection.triangleIndex = i;
 					
 
-				} else {
-					closestIntersection.distanceFromCamera = t;
-					closestIntersection.intersectedTriangle = triangle;
-					closestIntersection.triangleIndex = i;
-					
-
-					closestIntersection.intersectionPoint = intersectionPoint;
-					closestIntersection.u = u;
-					closestIntersection.v = v;
-				}
+				closestIntersection.intersectionPoint = intersectionPoint;
+				closestIntersection.u = u;
+				closestIntersection.v = v;
 
 				maxDist = t;
 
@@ -511,6 +485,28 @@ RayTriangleIntersection getClosestIntersection(std::vector<ModelTriangle> triang
 			}
 		}
 	}
+
+	if (closestIntersection.intersectedTriangle.glass == true) {
+		glm::vec3 normal = closestIntersection.intersectedTriangle.normal;
+		glm::vec3 falo = refract(rayDirection, normal, REFRACTIVE_INDEX);
+		if (falo == glm::vec3(0,0,0)) {
+			glm::vec3 angleOfReflection = rayDirection - ((2.0f*glm::dot(rayDirection, normal)*normal));
+			angleOfReflection = normalize(angleOfReflection);
+			RayTriangleIntersection reflection = refractionIntersection(triangles, angleOfReflection, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
+			closestIntersection = reflection;
+		} else {
+			closestIntersection = refractionIntersection(triangles, falo, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
+		}
+
+	} else if(closestIntersection.intersectedTriangle.mirror == true) {
+		glm::vec3 normal = closestIntersection.intersectedTriangle.normal;
+		glm::vec3 angleOfReflection = rayDirection - ((2.0f*glm::dot(rayDirection, normal)*normal));
+		angleOfReflection = normalize(angleOfReflection);
+
+		RayTriangleIntersection reflection = reflectionIntersection(triangles, angleOfReflection, closestIntersection.triangleIndex, closestIntersection.intersectionPoint);
+		closestIntersection = reflection;
+	}
+
 	return closestIntersection;
 
 }
@@ -1116,6 +1112,17 @@ void update(std::vector<ModelTriangle> &triangles) {
 			triangles[t].normal = glm::normalize(glm::cross(glm::vec3(triangles[t].vertices[1] - triangles[t].vertices[0]), glm::vec3(triangles[t].vertices[2] - triangles[t].vertices[0])));
 		}
 
+	} else if (rotationDirection == 3) { 
+		for (int t = 436; t < triangles.size(); t++) {
+			for (int i = 0; i < 3; i++) {
+				triangles[t].vertices[i].x = triangles[t].vertices[i].x - 0.05;
+				triangles[t].vertices[i].y = triangles[t].vertices[i].y - 0.01;
+				triangles[t].vertices[i].z = triangles[t].vertices[i].z + 0.05;
+			}
+			triangles[t].normal = glm::normalize(glm::cross(glm::vec3(triangles[t].vertices[1] - triangles[t].vertices[0]), glm::vec3(triangles[t].vertices[2] - triangles[t].vertices[0])));
+		}
+		moveLights(2, 0.1);
+		moveLights(0, -0.1);
 	}
 	rotationDirection = 0;
 
@@ -1136,7 +1143,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_c) moveLights(2, -0.1);
 		else if (event.key.keysym.sym == SDLK_v) moveLights(2, 0.1);
 		else if (event.key.keysym.sym == SDLK_y) rotationDirection = 1;
-		else if (event.key.keysym.sym == SDLK_t) rotationDirection = 2;
+		else if (event.key.keysym.sym == SDLK_t) rotationDirection = 3;
 		// CAMERA ROTATION
 		else if (event.key.keysym.sym == SDLK_r) {
 			float theta = -PI/180;
@@ -1257,7 +1264,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 			std::cout << "Light Strength: " << lightStrength << std::endl;
 		}
 
-	} else if (event.type == SDL_MOUSEBUTTONDOWN) window.savePPM("output.ppm");
+	} else if (event.type == SDL_MOUSEBUTTONDOWN) window.savePPM("00001.ppm");
 }
 
 int main(int argc, char *argv[]) {
@@ -1274,20 +1281,20 @@ int main(int argc, char *argv[]) {
 	std::unordered_map<std::string, Colour> colours2;
 	std::unordered_map<std::string, TextureMap> textures;
 
-	// colours = parseMtl("textured-cornell-box.mtl", textures);
+	colours = parseMtl("textured-cornell-box.mtl", textures);
 
-	// triangles = parseObj("textured-cornell-box.obj", 0.4, colours);
+	triangles = parseObj("textured-cornell-box.obj", 0.4, colours);
 
-	colours = parseMtl("cornell-box.mtl", textures);
+	// colours = parseMtl("cornell-box.mtl", textures);
 
-	triangles = parseObj("low_poly_bunny.obj", 0.4, colours);
+	// triangles = parseObj("low_poly_bunny.obj", 0.4, colours);
 
-	triangles2 = parseObj("newestsphere.obj", 0.4, colours);
+	// triangles2 = parseObj("newestsphere.obj", 0.4, colours);
 
-	triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
+	// triangles.insert(triangles.end(), triangles2.begin(), triangles2.end());
 
-	colours2 = parseMtl("materials.mtl", textures);
-	triangles3 = parseObj("logo.obj", 0.002, colours2);
+	// colours2 = parseMtl("materials.mtl", textures);
+	// triangles3 = parseObj("logo.obj", 0.002, colours2);
 
 	triangles.insert(triangles.end(), triangles3.begin(), triangles3.end());
 
@@ -1304,6 +1311,25 @@ int main(int argc, char *argv[]) {
 			drawCornell(window, triangles);
 		} else {
 			raytraceCornell(window, triangles, textures);
+			std::string filename;
+			std::string temp = std::to_string(counter);
+			if (counter < 10) {
+				filename = "frames2/0000";
+				filename = filename + temp;
+				filename = filename + ".ppm";
+			} else if (counter > 99) {
+				filename = "frames2/00";
+				filename = filename + temp;
+				filename = filename + ".ppm";
+			} else {
+				filename = "frames2/000";
+				filename = filename + temp;
+				filename = filename + ".ppm";
+			}
+			window.savePPM(filename);
+			moveLights(0, 0.1);
+			moveLights(2, 0.1);
+			counter++;
 		}
 
 		// Need to render the frame at the end, or nothing actually gets shown on the screen !
